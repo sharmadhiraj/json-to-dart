@@ -1,7 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:json_to_dart/util/constants.dart';
+import 'package:json_to_dart/util/util.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,18 +11,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _jsonInputController = TextEditingController();
-  bool _isValidJson = true;
+  final TextEditingController _jsonStringController = TextEditingController();
+  final TextEditingController _classNameController = TextEditingController();
   String _dartClass = "";
-  String _className = "";
-
-  @override
-  void initState() {
-    super.initState();
-    _jsonInputController.addListener(() {
-      _onTextChange();
-    });
-  }
+  bool _isValidJsonString = true;
 
   @override
   Widget build(BuildContext context) {
@@ -62,32 +54,39 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              maxLines: 1,
-              decoration: const InputDecoration(
-                labelText: "Class Name",
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (text) {
-                setState(() => _className = text);
-                _generateDartClass();
-              },
-            ),
+            _buildClassNameTextField(),
             const SizedBox(height: 12),
-            Expanded(
-              child: TextField(
-                autofocus: true,
-                controller: _jsonInputController,
-                keyboardType: TextInputType.multiline,
-                maxLines: 100,
-                decoration: InputDecoration(
-                  hintText: "Enter JSON here",
-                  border: const OutlineInputBorder(),
-                  errorText: _isValidJson ? null : "Invalid JSON",
-                ),
-              ),
-            ),
+            _buildJsonStringTextField(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClassNameTextField() {
+    return TextField(
+      controller: _classNameController,
+      maxLines: 1,
+      decoration: const InputDecoration(
+        labelText: "Class Name",
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (text) => _update(),
+    );
+  }
+
+  Widget _buildJsonStringTextField() {
+    return Expanded(
+      child: TextField(
+        controller: _jsonStringController,
+        autofocus: true,
+        keyboardType: TextInputType.multiline,
+        maxLines: 100,
+        onChanged: (text) => _update(),
+        decoration: InputDecoration(
+          hintText: "Enter JSON here",
+          border: const OutlineInputBorder(),
+          errorText: _isValidJsonString ? null : "Invalid JSON",
         ),
       ),
     );
@@ -104,76 +103,43 @@ class _HomeScreenState extends State<HomeScreen> {
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
         ),
-        child: SingleChildScrollView(
-          child: Text(
-            _dartClass,
-            style: const TextStyle(fontSize: 16),
-          ),
+        child: Stack(
+          children: [
+            _buildCopyButton(),
+            SingleChildScrollView(
+              child: Text(
+                _dartClass,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _onTextChange() {
+  Widget _buildCopyButton() {
+    return Positioned(
+      right: 0,
+      child: IconButton(
+        tooltip: "Copy Class Code to Clipboard",
+        onPressed: () => Clipboard.setData(ClipboardData(text: _dartClass)),
+        icon: const Icon(Icons.copy),
+      ),
+    );
+  }
+
+  void _update() {
+    String jsonString = _jsonStringController.text;
+    if (jsonString.isEmpty) jsonString = "{}";
+    setState(
+        () => _isValidJsonString = Util.checkIfValidJsonString(jsonString));
+    if (!_isValidJsonString) return;
     setState(() {
-      _isValidJson = _checkIfValidJson();
-      _generateDartClass();
+      _dartClass = Util.generateDartClass(
+        jsonString,
+        _classNameController.text,
+      );
     });
-  }
-
-  bool _checkIfValidJson() {
-    try {
-      jsonDecode(_jsonInputController.text);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void _generateDartClass() {
-    if (!_checkIfValidJson()) {
-      return;
-    }
-    dynamic jsonData = jsonDecode(_jsonInputController.text);
-    String data = "";
-    if (jsonData is Map<String, dynamic>) {
-      data = _generateClassFromMap(jsonData);
-    } else if (jsonData is List) {
-      if (jsonData.isNotEmpty) {
-        data = _generateClassFromMap(jsonData[0]);
-      }
-    }
-    setState(() {
-      _dartClass = data;
-    });
-  }
-
-  String _generateClassFromMap(Map<String, dynamic> jsonMap) {
-    StringBuffer classBuffer = StringBuffer();
-    classBuffer.writeln(
-        'class ${_className.trim().isEmpty ? "AutoGenerated" : _className} {');
-    jsonMap.forEach((key, value) {
-      classBuffer.writeln('  ${_getDartType(value)} $key;');
-    });
-    classBuffer.writeln('}');
-    return classBuffer.toString();
-  }
-
-  String _getDartType(dynamic value) {
-    if (value is String) {
-      return 'String';
-    } else if (value is int) {
-      return 'int';
-    } else if (value is double) {
-      return 'double';
-    } else if (value is bool) {
-      return 'bool';
-    } else if (value is List) {
-      return 'List<dynamic>';
-    } else if (value is Map) {
-      return 'Map<String, dynamic>';
-    } else {
-      return 'dynamic';
-    }
   }
 }
