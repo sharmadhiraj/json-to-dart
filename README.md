@@ -10,3 +10,7 @@ conversion tool.
 
 Visit the [JSON to Dart Converter](https://sharmadhiraj.github.io/json-to-dart/) tool to start
 converting your JSON to Dart classes.
+
+Your reviews, suggestions, and feedback are highly welcomed! Share your thoughts to help us enhance
+and improve the JSON to Dart Converter tool.
+
