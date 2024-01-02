@@ -7,3 +7,6 @@ conversion of nested and list objects, streamlining the process of generating Da
 JSON data. Additionally, it automatically adds a parseList method, making it seamless to work with
 lists in Dart. Simplify your Flutter development workflow with this straightforward JSON to Dart
 conversion tool.
+
+Visit the [JSON to Dart Converter](https://sharmadhiraj.github.io/json-to-dart/) tool to start
+converting your JSON to Dart classes.
