@@ -105,26 +105,37 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Stack(
           children: [
-            _buildCopyButton(),
             SingleChildScrollView(
               child: Text(
                 _dartClass,
                 style: const TextStyle(fontSize: 16),
               ),
             ),
+            _buildButtons(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCopyButton() {
+  Widget _buildButtons() {
+    final String fileName =
+        "${Util.convertToValidFileName(Util.getClassName(_classNameController.text))}.dart";
     return Positioned(
       right: 0,
-      child: IconButton(
-        tooltip: "Copy Class Code to Clipboard",
-        onPressed: () => Clipboard.setData(ClipboardData(text: _dartClass)),
-        icon: const Icon(Icons.copy),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: "Download $fileName",
+            onPressed: () => Util.initiateDownload(fileName, _dartClass),
+            icon: const Icon(Icons.download),
+          ),
+          IconButton(
+            tooltip: "Copy Class Code to Clipboard",
+            onPressed: () => Clipboard.setData(ClipboardData(text: _dartClass)),
+            icon: const Icon(Icons.copy),
+          )
+        ],
       ),
     );
   }

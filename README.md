@@ -13,4 +13,3 @@ converting your JSON to Dart classes.
 
 Your reviews, suggestions, and feedback are highly welcomed! Share your thoughts to help us enhance
 and improve the JSON to Dart Converter tool.
-
