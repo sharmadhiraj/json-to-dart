@@ -8,6 +8,10 @@ JSON data. Additionally, it automatically adds a parseList method, making it sea
 lists in Dart. Simplify your Flutter development workflow with this straightforward JSON to Dart
 conversion tool.
 
+### Demo
+
+![Demo Gif](demo.gif)
+
 Visit the [JSON to Dart Converter](https://sharmadhiraj.github.io/json-to-dart/) tool to start
 converting your JSON to Dart classes.
 
