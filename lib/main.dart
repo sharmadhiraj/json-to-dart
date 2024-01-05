@@ -16,7 +16,7 @@ class JsonToDartApp extends StatelessWidget {
       title: Constant.appName,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: false,
+        useMaterial3: true,
       ),
       home: const HomeScreen(),
     );
