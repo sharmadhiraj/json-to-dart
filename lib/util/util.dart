@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:web/web.dart' as web;
-// import 'dart:html' as html;
 
 class Util {
   static bool checkIfValidJsonString(String jsonString) {
@@ -13,18 +12,33 @@ class Util {
     }
   }
 
-  static String generateDartClass(String jsonString, String className) {
+  static String generateDartClass(
+    String jsonString,
+    String className,
+    bool fromJson,
+    bool toJson,
+    bool parseList,
+  ) {
     try {
       dynamic jsonData = jsonDecode(jsonString);
       if (jsonData is Map<String, dynamic>) {
         final Map<String, Map<String, dynamic>> nestedMaps =
             _extractNestedMapFromMap(className, jsonData);
         return nestedMaps.entries
-            .map((entry) => _generateClassFromMap(entry.value, entry.key))
+            .map(
+              (entry) => _generateClassFromMap(
+                entry.value,
+                entry.key,
+                fromJson,
+                toJson,
+                parseList,
+              ),
+            )
             .join("\n\n");
       } else if (jsonData is List) {
         if (jsonData.isNotEmpty) {
-          return generateDartClass(jsonEncode(jsonData[0]), className);
+          return generateDartClass(
+              jsonEncode(jsonData[0]), className, fromJson, toJson, parseList);
         }
       }
     } catch (_) {}
@@ -58,6 +72,9 @@ class Util {
   static String _generateClassFromMap(
     Map<String, dynamic> jsonMap,
     String className,
+    bool fromJson,
+    bool toJson,
+    bool parseList,
   ) {
     StringBuffer classBuffer = StringBuffer();
     className = getClassName(className);
@@ -73,36 +90,42 @@ class Util {
     classBuffer.writeln(" });");
     classBuffer.writeln("");
 
-    classBuffer
-        .writeln(" factory $className.fromJson(Map<String, dynamic> json) {");
-    classBuffer.writeln("   return $className(");
-    jsonMap.forEach((key, value) {
-      classBuffer.writeln(
-          "     ${_convertToValidVariableName(key)}: ${_convertFromJsonMapper(key, value)},");
-    });
-    classBuffer.writeln("   );");
-    classBuffer.writeln(" }");
-    classBuffer.writeln("");
-
-    classBuffer.writeln(" Map<String, dynamic> toJson() {");
-    classBuffer.writeln("   return {");
-    jsonMap.forEach((key, value) {
+    if (fromJson) {
       classBuffer
-          .writeln("     \"$key\": ${_convertToJsonMapper(key, value)},");
-    });
-    classBuffer.writeln("   };");
-    classBuffer.writeln(" }");
-    classBuffer.writeln();
+          .writeln(" factory $className.fromJson(Map<String, dynamic> json) {");
+      classBuffer.writeln("   return $className(");
+      jsonMap.forEach((key, value) {
+        classBuffer.writeln(
+            "     ${_convertToValidVariableName(key)}: ${_convertFromJsonMapper(key, value)},");
+      });
+      classBuffer.writeln("   );");
+      classBuffer.writeln(" }");
+      classBuffer.writeln("");
+    }
 
-    classBuffer
-        .writeln(" static List<$className> parseList(dynamic jsonList) {");
-    classBuffer.writeln(
-        "   if (jsonList == null || jsonList is! List || jsonList.isEmpty) {");
-    classBuffer.writeln("     return [];");
-    classBuffer.writeln("   }");
-    classBuffer.writeln(
-        "   return jsonList.map((json) => $className.fromJson(json)).toList();");
-    classBuffer.writeln(" }");
+    if (toJson) {
+      classBuffer.writeln(" Map<String, dynamic> toJson() {");
+      classBuffer.writeln("   return {");
+      jsonMap.forEach((key, value) {
+        classBuffer
+            .writeln("     \"$key\": ${_convertToJsonMapper(key, value)},");
+      });
+      classBuffer.writeln("   };");
+      classBuffer.writeln(" }");
+      classBuffer.writeln();
+    }
+
+    if (parseList) {
+      classBuffer
+          .writeln(" static List<$className> parseList(dynamic jsonList) {");
+      classBuffer.writeln(
+          "   if (jsonList == null || jsonList is! List || jsonList.isEmpty) {");
+      classBuffer.writeln("     return [];");
+      classBuffer.writeln("   }");
+      classBuffer.writeln(
+          "   return jsonList.map((json) => $className.fromJson(json)).toList();");
+      classBuffer.writeln(" }");
+    }
 
     classBuffer.writeln("}");
     return classBuffer.toString();

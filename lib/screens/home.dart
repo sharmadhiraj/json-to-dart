@@ -15,6 +15,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _classNameController = TextEditingController();
   String _dartClass = "";
   bool _isValidJsonString = true;
+  bool _fromJson = true;
+  bool _toJson = true;
+  bool _parseList = true;
 
   @override
   Widget build(BuildContext context) {
@@ -91,10 +94,13 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildClassNameTextField(),
             const SizedBox(height: 12),
             _buildJsonStringTextField(),
+            const SizedBox(height: 12),
+            _buildChooseOutputOptions(),
           ],
         ),
       ),
@@ -127,6 +133,42 @@ class _HomeScreenState extends State<HomeScreen> {
           errorText: _isValidJsonString ? null : "Invalid JSON",
         ),
       ),
+    );
+  }
+
+  Widget _buildChooseOutputOptions() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CheckboxListTile(
+          contentPadding: EdgeInsets.all(0),
+          title: const Text('Generate fromJson method'),
+          value: _fromJson,
+          onChanged: (value) {
+            setState(() => _fromJson = value ?? _fromJson);
+            _update();
+          },
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.all(0),
+          title: const Text('Generate toJson method'),
+          value: _toJson,
+          onChanged: (value) {
+            setState(() => _toJson = value ?? _toJson);
+            _update();
+          },
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.all(0),
+          title: const Text('Generate parseList method'),
+          value: _parseList,
+          onChanged: (value) {
+            setState(() => _parseList = value ?? _parseList);
+            _update();
+          },
+        ),
+      ],
     );
   }
 
@@ -195,6 +237,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _dartClass = Util.generateDartClass(
         jsonString,
         _classNameController.text,
+        _fromJson,
+        _toJson,
+        _parseList,
       );
     });
   }
