@@ -11,13 +11,29 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String _dartClass = "";
   final TextEditingController _jsonStringController = TextEditingController();
   final TextEditingController _classNameController = TextEditingController();
-  String _dartClass = "";
   bool _isValidJsonString = true;
   bool _fromJson = true;
   bool _toJson = true;
   bool _parseList = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final Map<String, dynamic> settings = await Util.loadSettings();
+      setState(() {
+        _jsonStringController.text = settings["jsonCode"];
+        _classNameController.text = settings["dartClass"];
+        _fromJson = settings["fromJson"];
+        _toJson = settings["toJson"];
+        _parseList = settings["parseList"];
+      });
+      _update();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -242,5 +258,12 @@ class _HomeScreenState extends State<HomeScreen> {
         _parseList,
       );
     });
+    Util.saveSettings(
+      dartClass: _classNameController.text,
+      jsonCode: jsonString,
+      fromJson: _fromJson,
+      toJson: _toJson,
+      parseList: _parseList,
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web/web.dart' as web;
 
 class Util {
@@ -251,5 +252,37 @@ class Util {
       ..href = 'https://sharmadhiraj.com/profile/'
       ..target = '_blank'
       ..click();
+  }
+
+  static Future<void> saveSettings({
+    required String dartClass,
+    required String jsonCode,
+    required bool fromJson,
+    required bool toJson,
+    required bool parseList,
+  }) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Map<String, dynamic> settings = {
+      "dartClass": dartClass,
+      "jsonCode": jsonCode,
+      "fromJson": fromJson,
+      "toJson": toJson,
+      "parseList": parseList,
+    };
+    await prefs.setString("jsonToDartSettings", jsonEncode(settings));
+  }
+
+  static Future<Map<String, dynamic>> loadSettings() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final dynamic settingsJson = prefs.getString("jsonToDartSettings");
+    return settingsJson != null
+        ? jsonDecode(settingsJson) as Map<String, dynamic>
+        : {
+            "dartClass": "",
+            "jsonCode": "",
+            "fromJson": true,
+            "toJson": true,
+            "parseList": true,
+          };
   }
 }
