@@ -1,19 +1,17 @@
 # JSON to Dart
 
-A Flutter web app simplifying the conversion of JSON data into Dart classes effortlessly.
+A Flutter web app to effortlessly convert JSON data into Dart classes.
 
-Easily convert JSON to Dart class, a must-have for Flutter developers. This tool supports the
-conversion of nested and list objects, streamlining the process of generating Dart classes from your
-JSON data. Additionally, it automatically adds a parseList method, making it seamless to work with
-lists in Dart. Simplify your Flutter development workflow with this straightforward JSON to Dart
-conversion tool.
+## Features
+- Converts JSON to Dart classes with support for nested objects and lists.
+- Optional generation of `toJson`, `fromJson`, and `parseList` methods.
+- Caches input JSON and settings for a seamless workflow.
+- Simple, user-friendly interface for Flutter developers.
 
-### Demo
-
+## Demo
 ![Demo Gif](demo.gif)
 
-Visit the [JSON to Dart Converter](https://sharmadhiraj.github.io/json-to-dart/) tool to start
-converting your JSON to Dart classes.
+Try it at [JSON to Dart Converter](https://sharmadhiraj.github.io/json-to-dart/).
 
-Your reviews, suggestions, and feedback are highly welcomed! Share your thoughts to help us enhance
-and improve the JSON to Dart Converter tool.
+## Feedback
+Your reviews and suggestions are welcome! Share feedback to improve the tool.
