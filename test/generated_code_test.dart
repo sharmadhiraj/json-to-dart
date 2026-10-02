@@ -15,10 +15,6 @@ const Map<String, GeneratorOptions> _variants = {
     detectDates: true,
     allNullable: true,
   ),
-  "serializable": GeneratorOptions(
-    jsonSerializable: true,
-    detectDates: true,
-  ),
 };
 
 const String _pubspec = """
@@ -50,9 +46,6 @@ void main() {
         if (update) golden.writeAsStringSync(actual);
         expect(actual, golden.readAsStringSync());
       });
-
-      // json_serializable output needs build_runner to be analyzable.
-      if (variant.key == "serializable") continue;
 
       test("generated code analyzes cleanly: $label", () async {
         final Directory temp = Directory.systemTemp.createTempSync("j2d");

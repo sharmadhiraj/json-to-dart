@@ -6,7 +6,6 @@ class GeneratorOptions {
     this.copyWithMethod = false,
     this.equality = false,
     this.detectDates = false,
-    this.jsonSerializable = false,
     this.allNullable = false,
   });
 
@@ -18,7 +17,6 @@ class GeneratorOptions {
       copyWithMethod: json["copyWithMethod"] as bool? ?? false,
       equality: json["equality"] as bool? ?? false,
       detectDates: json["detectDates"] as bool? ?? false,
-      jsonSerializable: json["jsonSerializable"] as bool? ?? false,
       allNullable: json["allNullable"] as bool? ?? false,
     );
   }
@@ -29,13 +27,9 @@ class GeneratorOptions {
   final bool copyWithMethod;
   final bool equality;
   final bool detectDates;
-  final bool jsonSerializable;
   final bool allNullable;
 
-  /// json_serializable always delegates to generated fromJson/toJson.
-  bool get emitFromJson => fromJson || jsonSerializable;
-  bool get emitToJson => toJson || jsonSerializable;
-  bool get effectiveParseList => emitFromJson && parseList;
+  bool get effectiveParseList => fromJson && parseList;
 
   GeneratorOptions copyWith({
     bool? fromJson,
@@ -44,7 +38,6 @@ class GeneratorOptions {
     bool? copyWithMethod,
     bool? equality,
     bool? detectDates,
-    bool? jsonSerializable,
     bool? allNullable,
   }) {
     return GeneratorOptions(
@@ -54,7 +47,6 @@ class GeneratorOptions {
       copyWithMethod: copyWithMethod ?? this.copyWithMethod,
       equality: equality ?? this.equality,
       detectDates: detectDates ?? this.detectDates,
-      jsonSerializable: jsonSerializable ?? this.jsonSerializable,
       allNullable: allNullable ?? this.allNullable,
     );
   }
@@ -67,7 +59,6 @@ class GeneratorOptions {
       "copyWithMethod": copyWithMethod,
       "equality": equality,
       "detectDates": detectDates,
-      "jsonSerializable": jsonSerializable,
       "allNullable": allNullable,
     };
   }

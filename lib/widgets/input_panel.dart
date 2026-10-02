@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:json_to_dart/controllers/converter_controller.dart';
 import 'package:json_to_dart/util/constants.dart';
 import 'package:json_to_dart/util/web_utils.dart';
-import 'package:json_to_dart/generator/generator_options.dart';
-import 'package:json_to_dart/widgets/option_chip.dart';
+import 'package:json_to_dart/widgets/panel_card.dart';
 
 class InputPanel extends StatelessWidget {
   const InputPanel({required this.controller, super.key});
+
+  static const double _compactBelowWidth = 560;
 
   final ConverterController controller;
 
@@ -23,134 +24,93 @@ class InputPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: controller.classNameController,
-              decoration: const InputDecoration(
-                labelText: "Class Name",
-                border: OutlineInputBorder(),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool compact = constraints.maxWidth < _compactBelowWidth;
+        return ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => PanelCard(
+            title: "JSON",
+            actions: _buildActions(compact),
+            footer: controller.error == null
+                ? null
+                : _ErrorBanner(message: controller.error!),
+            child: TextField(
+              controller: controller.jsonController,
+              focusNode: controller.jsonFocusNode,
+              autofocus: true,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              style: const TextStyle(fontFamily: "monospace"),
               onChanged: (_) => controller.onInputChanged(),
-            ),
-            const SizedBox(height: 8),
-            _buildToolbar(),
-            const SizedBox(height: 4),
-            Expanded(
-              child: TextField(
-                controller: controller.jsonController,
-                autofocus: true,
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                style: const TextStyle(fontFamily: "monospace"),
-                onChanged: (_) => controller.onInputChanged(),
-                decoration: InputDecoration(
-                  hintText: "Enter JSON here, or drop a .json file",
-                  border: const OutlineInputBorder(),
-                  errorText: controller.error,
-                  errorMaxLines: 3,
-                ),
+              decoration: const InputDecoration(
+                hintText: "Enter JSON here, or drop a .json file",
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(12),
               ),
             ),
-            const SizedBox(height: 8),
-            _buildOptions(),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildActions(bool compact) {
+    Widget action(String label, IconData icon, VoidCallback onPressed) {
+      return _ToolbarButton(
+        label: label,
+        icon: icon,
+        compact: compact,
+        onPressed: () {
+          onPressed();
+          controller.focusInput();
+        },
+      );
+    }
+
+    return [
+      action("Format", Icons.format_align_left, controller.formatJson),
+      action(
+        "Sample",
+        Icons.data_object,
+        () => controller.setJson(Constant.sampleJson),
+      ),
+      action("Paste", Icons.content_paste, _paste),
+      action("Upload", Icons.upload_file, _upload),
+      action("Clear", Icons.clear, controller.clear),
+    ];
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      label: "JSON error: $message",
+      child: Container(
+        color: colors.errorContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, size: 18, color: colors.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: colors.onErrorContainer),
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildToolbar() {
-    return Wrap(
-      spacing: 4,
-      children: [
-        _ToolbarButton(
-          label: "Format",
-          icon: Icons.format_align_left,
-          onPressed: controller.formatJson,
-        ),
-        _ToolbarButton(
-          label: "Sample",
-          icon: Icons.data_object,
-          onPressed: () => controller.setJson(Constant.sampleJson),
-        ),
-        _ToolbarButton(
-          label: "Paste",
-          icon: Icons.content_paste,
-          onPressed: _paste,
-        ),
-        _ToolbarButton(
-          label: "Upload",
-          icon: Icons.upload_file,
-          onPressed: _upload,
-        ),
-        _ToolbarButton(
-          label: "Clear",
-          icon: Icons.clear,
-          onPressed: controller.clear,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOptions() {
-    final GeneratorOptions o = controller.options;
-    void update(GeneratorOptions options) => controller.setOptions(options);
-    return Wrap(
-      spacing: 8,
-      children: [
-        OptionChip(
-          label: "fromJson",
-          selected: o.emitFromJson,
-          onChanged: o.jsonSerializable
-              ? null
-              : (v) => update(o.copyWith(fromJson: v)),
-        ),
-        OptionChip(
-          label: "toJson",
-          selected: o.emitToJson,
-          onChanged:
-              o.jsonSerializable ? null : (v) => update(o.copyWith(toJson: v)),
-        ),
-        OptionChip(
-          label: "parseList",
-          selected: o.effectiveParseList,
-          onChanged:
-              o.emitFromJson ? (v) => update(o.copyWith(parseList: v)) : null,
-        ),
-        OptionChip(
-          label: "copyWith",
-          selected: o.copyWithMethod,
-          onChanged: (v) => update(o.copyWith(copyWithMethod: v)),
-        ),
-        OptionChip(
-          label: "== and hashCode",
-          selected: o.equality,
-          onChanged: (v) => update(o.copyWith(equality: v)),
-        ),
-        OptionChip(
-          label: "Detect dates",
-          selected: o.detectDates,
-          onChanged: (v) => update(o.copyWith(detectDates: v)),
-        ),
-        OptionChip(
-          label: "All fields nullable",
-          selected: o.allNullable,
-          onChanged: (v) => update(o.copyWith(allNullable: v)),
-        ),
-        OptionChip(
-          label: "json_serializable",
-          selected: o.jsonSerializable,
-          onChanged: (v) => update(o.copyWith(jsonSerializable: v)),
-        ),
-      ],
     );
   }
 }
@@ -159,11 +119,13 @@ class _ToolbarButton extends StatelessWidget {
   const _ToolbarButton({
     required this.label,
     required this.icon,
+    required this.compact,
     required this.onPressed,
   });
 
   final String label;
   final IconData icon;
+  final bool compact;
   final VoidCallback onPressed;
 
   @override
@@ -171,11 +133,18 @@ class _ToolbarButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: "$label JSON",
-      child: TextButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        label: Text(label),
-      ),
+      child: compact
+          ? IconButton(
+              tooltip: label,
+              visualDensity: VisualDensity.compact,
+              onPressed: onPressed,
+              icon: Icon(icon, size: 20),
+            )
+          : TextButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 18),
+              label: Text(label),
+            ),
     );
   }
 }

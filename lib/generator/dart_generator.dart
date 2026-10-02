@@ -39,13 +39,9 @@ abstract final class DartGenerator {
         schema.classes.values.any(
           (fields) => fields.values.any((t) => t.kind == JsonKind.list),
         );
-    return [
-      if (options.jsonSerializable)
-        "import 'package:json_annotation/json_annotation.dart';",
-      if (usesDeepEquality) "import 'package:collection/collection.dart';",
-      if (options.jsonSerializable)
-        '\npart "${Naming.fileName(schema.rootName)}.g.dart";',
-    ].join("\n");
+    return usesDeepEquality
+        ? "import 'package:collection/collection.dart';"
+        : "";
   }
 
   static List<Map<String, Object?>> _rootObjects(Object? json) {

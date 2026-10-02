@@ -20,6 +20,7 @@ class OptionChip extends StatelessWidget {
         label: Text(label),
         selected: selected,
         onSelected: onChanged,
+        visualDensity: VisualDensity.compact,
       ),
     );
   }

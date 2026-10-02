@@ -14,21 +14,14 @@ class ClassEmitter {
         ? {for (final e in parsedFields.entries) e.key: e.value.asNullable()}
         : parsedFields;
     final Map<String, String> names = _fieldNames(fields.keys);
-    final StringBuffer out = StringBuffer();
-    if (options.jsonSerializable) {
-      out.writeln("@JsonSerializable(explicitToJson: true)");
-    }
-    out.writeln("class $className {");
+    final StringBuffer out = StringBuffer()..writeln("class $className {");
     for (final MapEntry<String, FieldType> f in fields.entries) {
-      if (options.jsonSerializable && names[f.key] != f.key) {
-        out.writeln("  @JsonKey(name: ${ExpressionBuilder.quote(f.key)})");
-      }
       out.writeln("  final ${f.value.dartType} ${names[f.key]};");
     }
     out.writeln();
     _writeConstructor(out, className, fields, names);
-    if (options.emitFromJson) _writeFromJson(out, className, fields, names);
-    if (options.emitToJson) _writeToJson(out, className, fields, names);
+    if (options.fromJson) _writeFromJson(out, className, fields, names);
+    if (options.toJson) _writeToJson(out, fields, names);
     if (options.effectiveParseList) _writeParseList(out, className);
     if (options.copyWithMethod && fields.isNotEmpty) {
       _writeCopyWith(out, className, fields, names);
@@ -62,14 +55,8 @@ class ClassEmitter {
     Map<String, FieldType> fields,
     Map<String, String> names,
   ) {
-    out.writeln();
-    if (options.jsonSerializable) {
-      out.writeln(
-        "  factory $className.fromJson(Map<String, dynamic> json) => _\$${className}FromJson(json);",
-      );
-      return;
-    }
     out
+      ..writeln()
       ..writeln("  factory $className.fromJson(Map<String, dynamic> json) {")
       ..writeln("    return $className(");
     for (final MapEntry<String, FieldType> f in fields.entries) {
@@ -85,18 +72,11 @@ class ClassEmitter {
 
   void _writeToJson(
     StringBuffer out,
-    String className,
     Map<String, FieldType> fields,
     Map<String, String> names,
   ) {
-    out.writeln();
-    if (options.jsonSerializable) {
-      out.writeln(
-        "  Map<String, dynamic> toJson() => _\$${className}ToJson(this);",
-      );
-      return;
-    }
     out
+      ..writeln()
       ..writeln("  Map<String, dynamic> toJson() {")
       ..writeln("    return {");
     for (final MapEntry<String, FieldType> f in fields.entries) {

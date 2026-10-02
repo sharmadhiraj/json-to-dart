@@ -20,6 +20,7 @@ class ConverterController extends ChangeNotifier {
   final Duration _debounceDuration;
   final TextEditingController jsonController = TextEditingController();
   final TextEditingController classNameController = TextEditingController();
+  final FocusNode jsonFocusNode = FocusNode();
 
   Timer? _debounce;
   String _dartClass = "";
@@ -60,6 +61,8 @@ class ConverterController extends ChangeNotifier {
   }
 
   void clear() => setJson("");
+
+  void focusInput() => jsonFocusNode.requestFocus();
 
   void formatJson() {
     try {
@@ -118,6 +121,7 @@ class ConverterController extends ChangeNotifier {
     _debounce?.cancel();
     jsonController.dispose();
     classNameController.dispose();
+    jsonFocusNode.dispose();
     super.dispose();
   }
 }

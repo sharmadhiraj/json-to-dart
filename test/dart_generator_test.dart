@@ -173,26 +173,5 @@ void main() {
       );
       expect(withList, contains("const DeepCollectionEquality().equals("));
     });
-
-    test("json_serializable delegates to generated code", () {
-      final String out = gen(
-        '{"user_name":"a","id":1}',
-        name: "Account",
-        options: const GeneratorOptions(
-          jsonSerializable: true,
-          fromJson: false,
-          toJson: false,
-        ),
-      );
-      expect(
-        out,
-        contains("import 'package:json_annotation/json_annotation.dart';"),
-      );
-      expect(out, contains('part "account.g.dart";'));
-      expect(out, contains("@JsonSerializable(explicitToJson: true)"));
-      expect(out, contains('@JsonKey(name: "user_name")'));
-      expect(out, contains(r"_$AccountFromJson(json)"));
-      expect(out, contains(r"_$AccountToJson(this)"));
-    });
   });
 }
