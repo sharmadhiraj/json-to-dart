@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:json_to_dart/controllers/converter_controller.dart';
 import 'package:json_to_dart/data/app_settings.dart';
@@ -20,7 +21,16 @@ class FakeSettingsService extends SettingsService {
   }
 }
 
+Future<Object?>? _ignoreCalls(MethodCall call) async => null;
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, _ignoreCalls);
+  });
+
   const Duration debounce = Duration(milliseconds: 10);
 
   ConverterController create(FakeSettingsService service) =>
@@ -98,6 +108,55 @@ void main() {
     await c.load();
     c.classNameController.text = "MyUser";
     expect(c.fileName, "my_user.dart");
+    c.dispose();
+  });
+
+  test("load prefers the provided initial settings", () async {
+    final FakeSettingsService service = FakeSettingsService(
+      const AppSettings(jsonCode: '{"stored":1}'),
+    );
+    final ConverterController c = create(service);
+    await c.load(initial: const AppSettings(jsonCode: '{"shared":1}'));
+    expect(c.dartClass, contains("shared"));
+    expect(c.dartClass, isNot(contains("stored")));
+    c.dispose();
+  });
+
+  test("class renames apply, then reset when new JSON is loaded", () async {
+    final ConverterController c = create(FakeSettingsService());
+    await c.load();
+    c.setJson('{"user":{"id":1}}');
+    expect(c.nestedClasses.single.name, "User");
+    c.setClassRenames({"User": "Account"});
+    expect(c.dartClass, contains("class Account {"));
+    expect(c.nestedClasses.single.original, "User");
+    c.formatJson();
+    expect(c.dartClass, contains("class Account {"));
+    c.setJson('{"user":{"id":2}}');
+    expect(c.dartClass, contains("class User {"));
+    c.dispose();
+  });
+
+  test("copyOutput flags copied, then resets", () async {
+    final ConverterController c = create(FakeSettingsService());
+    await c.load();
+    await c.copyOutput();
+    expect(c.copied, isFalse);
+    c.setJson('{"a":1}');
+    await c.copyOutput();
+    expect(c.copied, isTrue);
+    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    expect(c.copied, isFalse);
+    c.dispose();
+  });
+
+  test("currentSettings reflects the editor state", () async {
+    final ConverterController c = create(FakeSettingsService());
+    await c.load();
+    c.classNameController.text = "Thing";
+    c.setJson('{"a":1}');
+    expect(c.currentSettings.className, "Thing");
+    expect(c.currentSettings.jsonCode, '{"a":1}');
     c.dispose();
   });
 }

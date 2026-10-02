@@ -174,4 +174,99 @@ void main() {
       expect(withList, contains("const DeepCollectionEquality().equals("));
     });
   });
+
+  group("maps", () {
+    test("dynamic-looking keys become Map<String, T> with merged values", () {
+      final String out = gen(
+        '{"scores":{"2024-01":{"v":1},"2024-02":{"v":2,"w":"x"}}}',
+      );
+      expect(out, contains("final Map<String, Score> scores;"));
+      expect(out, contains("class Score {"));
+      expect(out, contains("final String? w;"));
+      expect(out, contains("(json[\"scores\"] as Map<String, dynamic>)"));
+      expect(out, contains(".map((k, v) => MapEntry(k, Score.fromJson("));
+      expect(out, contains("scores.map((k, v) => MapEntry(k, v.toJson()))"));
+    });
+
+    test("numeric and uuid keys are detected", () {
+      expect(gen('{"a":{"1":1,"2":2}}'), contains("Map<String, int> a;"));
+      expect(
+        gen('{"a":{"123e4567-e89b-12d3-a456-426614174000":"x","123e4567-e89b-12d3-a456-426614174001":"y"}}'),
+        contains("Map<String, String> a;"),
+      );
+    });
+
+    test("regular keys and single keys stay classes", () {
+      expect(gen('{"a":{"name":1,"city":2}}'), contains("class A {"));
+      expect(gen('{"a":{"1":1}}'), contains("class A {"));
+    });
+
+    test("detection can be disabled", () {
+      final String out = gen(
+        '{"a":{"1":1,"2":2}}',
+        options: const GeneratorOptions(detectMaps: false),
+      );
+      expect(out, contains("class A {"));
+    });
+
+    test("primitive map values need no conversion", () {
+      final String out = gen('{"a":{"u1":[1],"u2":[2]}}');
+      expect(out, contains("final Map<String, List<int>> a;"));
+      expect(out, contains('"a": a,'));
+    });
+
+    test("empty object becomes Map<String, dynamic>", () {
+      final String out = gen('{"meta":{}}');
+      expect(out, contains("final Map<String, dynamic> meta;"));
+      expect(out, contains('Map<String, dynamic>.from(json["meta"] as Map)'));
+      expect(out, isNot(contains("class Meta")));
+    });
+
+    test("empty object merges into a populated sibling", () {
+      final String out = gen('{"l":[{"m":{}},{"m":{"x":1}}]}');
+      expect(out, contains("final M m;"));
+      expect(out, contains("class M {"));
+    });
+
+    test("map field equality uses deep equality", () {
+      final String out = gen(
+        '{"a":{"1":1,"2":2}}',
+        options: const GeneratorOptions(equality: true),
+      );
+      expect(out, contains("DeepCollectionEquality().equals"));
+      expect(out, contains("package:collection"));
+    });
+  });
+
+  group("class renames", () {
+    test("rename applies to the class and every reference", () {
+      final String out = gen(
+        '{"user":{"id":1},"owner":{"user":{"id":2}}}',
+        options: const GeneratorOptions(classRenames: {"User": "Account"}),
+      );
+      expect(out, contains("class Account {"));
+      expect(out, contains("final Account user;"));
+      expect(out, isNot(contains("class User")));
+    });
+
+    test("result lists nested classes with original names", () {
+      final GenerationResult result = DartGenerator.generateResult(
+        '{"user":{"id":1},"items":[{"a":1}]}',
+        "Root",
+        options: const GeneratorOptions(classRenames: {"Item": "Entry"}),
+      );
+      expect(
+        result.nestedClasses.map((c) => "${c.original}>${c.name}"),
+        ["User>User", "Item>Entry"],
+      );
+    });
+
+    test("renames are sanitized into valid class names", () {
+      final String out = gen(
+        '{"user":{"id":1}}',
+        options: const GeneratorOptions(classRenames: {"User": "my account"}),
+      );
+      expect(out, contains("class MyAccount {"));
+    });
+  });
 }

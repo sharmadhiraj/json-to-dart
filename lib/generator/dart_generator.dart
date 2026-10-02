@@ -14,9 +14,32 @@ class GeneratorException implements Exception {
   String toString() => message;
 }
 
+class GeneratedClass {
+  const GeneratedClass({required this.original, required this.name});
+
+  final String original;
+  final String name;
+}
+
+class GenerationResult {
+  const GenerationResult(this.code, this.nestedClasses);
+
+  final String code;
+
+  /// Every generated class except the root, in output order.
+  final List<GeneratedClass> nestedClasses;
+}
+
 abstract final class DartGenerator {
   /// Throws [JsonParseException] or [GeneratorException] on bad input.
   static String generate(
+    String jsonText,
+    String className, {
+    GeneratorOptions options = const GeneratorOptions(),
+  }) =>
+      generateResult(jsonText, className, options: options).code;
+
+  static GenerationResult generateResult(
     String jsonText,
     String className, {
     GeneratorOptions options = const GeneratorOptions(),
@@ -24,20 +47,31 @@ abstract final class DartGenerator {
     final Schema schema = SchemaInferrer.infer(
       Naming.className(className),
       _rootObjects(JsonParser.parse(jsonText)),
-      detectDates: options.detectDates,
+      options,
     );
     final ClassEmitter emitter = ClassEmitter(options);
-    final String classes = schema.orderedClassNames
+    final List<String> names = schema.orderedClassNames;
+    final String classes = names
         .map((name) => emitter.emit(name, schema.classes[name]!))
         .join("\n\n");
     final String header = _header(schema, options);
-    return header.isEmpty ? classes : "$header\n\n$classes";
+    return GenerationResult(
+      header.isEmpty ? classes : "$header\n\n$classes",
+      [
+        for (final String name in names)
+          if (name != schema.rootName)
+            GeneratedClass(
+              original: schema.originalNames[name] ?? name,
+              name: name,
+            ),
+      ],
+    );
   }
 
   static String _header(Schema schema, GeneratorOptions options) {
     final bool usesDeepEquality = options.equality &&
         schema.classes.values.any(
-          (fields) => fields.values.any((t) => t.kind == JsonKind.list),
+          (fields) => fields.values.any((t) => t.isCollection),
         );
     return usesDeepEquality
         ? "import 'package:collection/collection.dart';"

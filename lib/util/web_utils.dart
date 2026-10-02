@@ -17,6 +17,9 @@ abstract final class WebUtils {
     web.URL.revokeObjectURL(url);
   }
 
+  static void replaceUrl(String url) =>
+      web.window.history.replaceState(null, "", url);
+
   static void openUrl(String url) {
     web.HTMLAnchorElement()
       ..href = url

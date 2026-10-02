@@ -6,7 +6,10 @@ class ExpressionBuilder {
 
   final GeneratorOptions options;
 
-  static String _itemVariable(int depth) => depth == 0 ? "e" : "e${depth + 1}";
+  static String _suffixed(String name, int depth) =>
+      depth == 0 ? name : "$name${depth + 1}";
+
+  static String _itemVariable(int depth) => _suffixed("e", depth);
 
   static String quote(String value) {
     final String escaped = value
@@ -45,6 +48,12 @@ class ExpressionBuilder {
           source,
           _listFromJson(type.element!, source, depth),
         );
+      case JsonKind.map:
+        return _nullGuard(
+          type,
+          source,
+          _mapFromJson(type.element!, source, depth),
+        );
       default:
         return source;
     }
@@ -62,10 +71,24 @@ class ExpressionBuilder {
     return "($source as List).map(($item) => $mapped).toList()";
   }
 
+  String _mapFromJson(FieldType element, String source, int depth) {
+    if (element.isDynamic) return "Map<String, dynamic>.from($source as Map)";
+    final String key = _suffixed("k", depth);
+    final String value = _suffixed("v", depth);
+    final String mapped = fromJson(element, value, depth + 1);
+    return "($source as Map<String, dynamic>).map(($key, $value) => MapEntry($key, $mapped))";
+  }
+
   String toJson(FieldType type, String source, [int depth = 0]) {
     final String q = type.nullable ? "?" : "";
     if (type.kind == JsonKind.object) return "$source$q.toJson()";
     if (type.kind == JsonKind.dateTime) return "$source$q.toIso8601String()";
+    if (type.kind == JsonKind.map && _needsConversion(type.innermost)) {
+      final String key = _suffixed("k", depth);
+      final String value = _suffixed("v", depth);
+      final String mapped = toJson(type.element!, value, depth + 1);
+      return "$source$q.map(($key, $value) => MapEntry($key, $mapped))";
+    }
     if (type.kind == JsonKind.list && _needsConversion(type.innermost)) {
       final String item = _itemVariable(depth);
       final String mapped = toJson(type.element!, item, depth + 1);

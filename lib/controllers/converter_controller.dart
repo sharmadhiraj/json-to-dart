@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:json_to_dart/data/app_settings.dart';
 import 'package:json_to_dart/data/settings_service.dart';
+import 'package:flutter/services.dart';
 import 'package:json_to_dart/generator/dart_generator.dart';
 import 'package:json_to_dart/generator/generator_options.dart';
 import 'package:json_to_dart/generator/json_formatter.dart';
@@ -25,6 +26,9 @@ class ConverterController extends ChangeNotifier {
   Timer? _debounce;
   String _dartClass = "";
   String? _error;
+  List<GeneratedClass> _nestedClasses = const [];
+  bool _copied = false;
+  Timer? _copiedReset;
   GeneratorOptions _options = const GeneratorOptions();
   String? _generatedJson;
   String? _generatedClassName;
@@ -33,11 +37,18 @@ class ConverterController extends ChangeNotifier {
 
   String get dartClass => _dartClass;
   String? get error => _error;
+  List<GeneratedClass> get nestedClasses => _nestedClasses;
+  bool get copied => _copied;
+  AppSettings get currentSettings => AppSettings(
+        className: classNameController.text,
+        jsonCode: jsonController.text,
+        options: _options,
+      );
   GeneratorOptions get options => _options;
   String get fileName => "${Naming.fileName(classNameController.text)}.dart";
 
-  Future<void> load() async {
-    final AppSettings settings = await _settingsService.load();
+  Future<void> load({AppSettings? initial}) async {
+    final AppSettings settings = initial ?? await _settingsService.load();
     if (_disposed) return;
     jsonController.text = settings.jsonCode;
     classNameController.text = settings.className;
@@ -55,9 +66,27 @@ class ConverterController extends ChangeNotifier {
     _regenerate();
   }
 
-  void setJson(String text) {
+  void setJson(String text, {bool keepRenames = false}) {
     jsonController.text = text;
+    if (!keepRenames && _options.classRenames.isNotEmpty) {
+      _options = _options.copyWith(classRenames: const {});
+    }
     _regenerate();
+  }
+
+  void setClassRenames(Map<String, String> renames) =>
+      setOptions(_options.copyWith(classRenames: renames));
+
+  Future<void> copyOutput() async {
+    if (_dartClass.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: _dartClass));
+    _copied = true;
+    notifyListeners();
+    _copiedReset?.cancel();
+    _copiedReset = Timer(const Duration(seconds: 2), () {
+      _copied = false;
+      if (!_disposed) notifyListeners();
+    });
   }
 
   void clear() => setJson("");
@@ -66,7 +95,7 @@ class ConverterController extends ChangeNotifier {
 
   void formatJson() {
     try {
-      setJson(JsonFormatter.prettify(jsonController.text));
+      setJson(JsonFormatter.prettify(jsonController.text), keepRenames: true);
     } on JsonParseException catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -87,11 +116,17 @@ class ConverterController extends ChangeNotifier {
     _generatedOptions = _options;
 
     String dartClass = "";
+    List<GeneratedClass> nestedClasses = const [];
     String? error;
     if (jsonText.trim().isNotEmpty) {
       try {
-        dartClass =
-            DartGenerator.generate(jsonText, className, options: _options);
+        final GenerationResult result = DartGenerator.generateResult(
+          jsonText,
+          className,
+          options: _options,
+        );
+        dartClass = result.code;
+        nestedClasses = result.nestedClasses;
       } on JsonParseException catch (e) {
         error = e.toString();
       } on GeneratorException catch (e) {
@@ -99,6 +134,7 @@ class ConverterController extends ChangeNotifier {
       }
     }
     _dartClass = dartClass;
+    _nestedClasses = nestedClasses;
     _error = error;
     notifyListeners();
     unawaited(_persist());
@@ -119,6 +155,7 @@ class ConverterController extends ChangeNotifier {
     _disposed = true;
     if (_debounce?.isActive ?? false) unawaited(_persist());
     _debounce?.cancel();
+    _copiedReset?.cancel();
     jsonController.dispose();
     classNameController.dispose();
     jsonFocusNode.dispose();

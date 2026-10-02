@@ -6,6 +6,7 @@ enum JsonKind {
   dateTime,
   object,
   list,
+  map,
   dynamic,
   // Inference-only kinds, rendered as `dynamic`.
   nullValue,
@@ -38,9 +39,11 @@ class FieldType {
 
   bool get isOptional => nullable || isDynamic;
 
+  bool get isCollection => kind == JsonKind.list || kind == JsonKind.map;
+
   FieldType get innermost {
     FieldType current = this;
-    while (current.kind == JsonKind.list) {
+    while (current.isCollection) {
       current = current.element!;
     }
     return current;
@@ -55,10 +58,14 @@ class FieldType {
       JsonKind.dateTime => "DateTime",
       JsonKind.object => className!,
       JsonKind.list => "List<${element!.dartType}>",
+      JsonKind.map => "Map<String, ${element!.dartType}>",
       _ => "dynamic",
     };
     return nullable && !isDynamic ? "$base?" : base;
   }
+
+  bool get _isEmptyMap =>
+      kind == JsonKind.map && element!.kind == JsonKind.unknown;
 
   FieldType asNullable() => FieldType(
         kind,
@@ -73,6 +80,12 @@ class FieldType {
     if (kind == JsonKind.nullValue) return other.asNullable();
     if (other.kind == JsonKind.nullValue) return asNullable();
     final bool eitherNullable = nullable || other.nullable;
+    if (_isEmptyMap && other.kind == JsonKind.object) {
+      return nullable ? other.asNullable() : other;
+    }
+    if (other._isEmptyMap && kind == JsonKind.object) {
+      return other.nullable ? asNullable() : this;
+    }
     if (kind == other.kind) {
       if (kind == JsonKind.object && className != other.className) {
         return dynamicType;
@@ -97,10 +110,13 @@ class FieldType {
 }
 
 class Schema {
-  const Schema(this.rootName, this.classes);
+  const Schema(this.rootName, this.classes, this.originalNames);
 
   final String rootName;
   final Map<String, Map<String, FieldType>> classes;
+
+  /// Generated class name before any user rename.
+  final Map<String, String> originalNames;
 
   /// Classes in depth-first order from the root, each listed once.
   List<String> get orderedClassNames {

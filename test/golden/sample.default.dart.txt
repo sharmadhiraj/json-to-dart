@@ -11,6 +11,9 @@ class Root {
   final List<String> tags;
   final List<List<int>> matrix;
   final List<dynamic> mixed;
+  final Map<String, dynamic> meta;
+  final Map<String, Score> scores;
+  final Map<String, List<int>> refs;
   final List<Order> orders;
 
   const Root({
@@ -26,6 +29,9 @@ class Root {
     required this.tags,
     required this.matrix,
     required this.mixed,
+    required this.meta,
+    required this.scores,
+    required this.refs,
     required this.orders,
   });
 
@@ -43,6 +49,9 @@ class Root {
       tags: (json["tags"] as List).map((e) => e as String).toList(),
       matrix: (json["matrix"] as List).map((e) => (e as List).map((e2) => e2 as int).toList()).toList(),
       mixed: List<dynamic>.from(json["mixed"] as List),
+      meta: Map<String, dynamic>.from(json["meta"] as Map),
+      scores: (json["scores"] as Map<String, dynamic>).map((k, v) => MapEntry(k, Score.fromJson(v as Map<String, dynamic>))),
+      refs: (json["refs"] as Map<String, dynamic>).map((k, v) => MapEntry(k, (v as List).map((e2) => e2 as int).toList())),
       orders: Order.parseList(json["orders"]),
     );
   }
@@ -61,6 +70,9 @@ class Root {
       "tags": tags,
       "matrix": matrix,
       "mixed": mixed,
+      "meta": meta,
+      "scores": scores.map((k, v) => MapEntry(k, v.toJson())),
+      "refs": refs,
       "orders": orders.map((e) => e.toJson()).toList(),
     };
   }
@@ -101,6 +113,37 @@ class Address {
       return [];
     }
     return list.map((e) => Address.fromJson(e as Map<String, dynamic>)).toList();
+  }
+}
+
+class Score {
+  final int value;
+  final List<String>? tags;
+
+  const Score({
+    required this.value,
+    this.tags,
+  });
+
+  factory Score.fromJson(Map<String, dynamic> json) {
+    return Score(
+      value: json["value"] as int,
+      tags: json["tags"] == null ? null : (json["tags"] as List).map((e) => e as String).toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "value": value,
+      "tags": tags,
+    };
+  }
+
+  static List<Score> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Score.fromJson(e as Map<String, dynamic>)).toList();
   }
 }
 

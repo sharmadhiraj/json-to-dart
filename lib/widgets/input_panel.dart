@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:json_to_dart/controllers/converter_controller.dart';
 import 'package:json_to_dart/util/constants.dart';
+import 'package:json_to_dart/util/shortcut_labels.dart';
 import 'package:json_to_dart/util/web_utils.dart';
 import 'package:json_to_dart/widgets/panel_card.dart';
 
@@ -58,9 +59,15 @@ class InputPanel extends StatelessWidget {
   }
 
   List<Widget> _buildActions(bool compact) {
-    Widget action(String label, IconData icon, VoidCallback onPressed) {
+    Widget action(
+      String label,
+      IconData icon,
+      VoidCallback onPressed, {
+      String? shortcut,
+    }) {
       return _ToolbarButton(
         label: label,
+        shortcut: shortcut,
         icon: icon,
         compact: compact,
         onPressed: () {
@@ -71,7 +78,12 @@ class InputPanel extends StatelessWidget {
     }
 
     return [
-      action("Format", Icons.format_align_left, controller.formatJson),
+      action(
+        "Format",
+        Icons.format_align_left,
+        controller.formatJson,
+        shortcut: ShortcutLabels.format,
+      ),
       action(
         "Sample",
         Icons.data_object,
@@ -121,9 +133,11 @@ class _ToolbarButton extends StatelessWidget {
     required this.icon,
     required this.compact,
     required this.onPressed,
+    this.shortcut,
   });
 
   final String label;
+  final String? shortcut;
   final IconData icon;
   final bool compact;
   final VoidCallback onPressed;
@@ -135,15 +149,18 @@ class _ToolbarButton extends StatelessWidget {
       label: "$label JSON",
       child: compact
           ? IconButton(
-              tooltip: label,
+              tooltip: shortcut == null ? label : "$label ($shortcut)",
               visualDensity: VisualDensity.compact,
               onPressed: onPressed,
               icon: Icon(icon, size: 20),
             )
-          : TextButton.icon(
-              onPressed: onPressed,
-              icon: Icon(icon, size: 18),
-              label: Text(label),
+          : Tooltip(
+              message: shortcut == null ? label : "$label ($shortcut)",
+              child: TextButton.icon(
+                onPressed: onPressed,
+                icon: Icon(icon, size: 18),
+                label: Text(label),
+              ),
             ),
     );
   }

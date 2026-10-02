@@ -139,7 +139,7 @@ class ClassEmitter {
     final List<String> hashes = [];
     for (final MapEntry<String, FieldType> f in fields.entries) {
       final String name = names[f.key]!;
-      if (f.value.kind == JsonKind.list) {
+      if (f.value.isCollection) {
         comparisons.add("$deepEquality.equals(other.$name, $name)");
         hashes.add("$deepEquality.hash($name)");
       } else {

@@ -1,11 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:json_to_dart/controllers/converter_controller.dart';
+import 'package:json_to_dart/data/share_codec.dart';
 import 'package:json_to_dart/util/constants.dart';
+import 'package:json_to_dart/util/shortcut_labels.dart';
 import 'package:json_to_dart/util/web_utils.dart';
 import 'package:json_to_dart/widgets/panel_card.dart';
+import 'package:json_to_dart/widgets/rename_classes_dialog.dart';
 
 class OutputPanel extends StatelessWidget {
   const OutputPanel({required this.controller, super.key});
@@ -27,12 +28,32 @@ class OutputPanel extends StatelessWidget {
           title: "Dart",
           subtitle: hasOutput ? controller.fileName : null,
           actions: [
-            _CopyButton(text: code, enabled: hasOutput),
+            if (controller.nestedClasses.isNotEmpty)
+              Semantics(
+                button: true,
+                label: "Rename generated classes",
+                child: IconButton(
+                  tooltip: "Rename classes",
+                  onPressed: () => _renameClasses(context),
+                  icon: const Icon(Icons.edit_note),
+                ),
+              ),
+            Semantics(
+              button: true,
+              label: "Copy share link",
+              child: IconButton(
+                tooltip: "Copy share link",
+                onPressed: () => _shareLink(context),
+                icon: const Icon(Icons.link),
+              ),
+            ),
+            _CopyButton(controller: controller),
             Semantics(
               button: true,
               label: "Download ${controller.fileName}",
               child: IconButton(
-                tooltip: "Download ${controller.fileName}",
+                tooltip:
+                    "Download ${controller.fileName} (${ShortcutLabels.download})",
                 onPressed: hasOutput
                     ? () => WebUtils.downloadFile(controller.fileName, code)
                     : null,
@@ -44,6 +65,34 @@ class OutputPanel extends StatelessWidget {
           child: hasOutput ? _buildCode(context, code) : _buildEmpty(context),
         );
       },
+    );
+  }
+
+  Future<void> _renameClasses(BuildContext context) async {
+    final Map<String, String>? renames = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (_) => RenameClassesDialog(classes: controller.nestedClasses),
+    );
+    if (renames != null) controller.setClassRenames(renames);
+  }
+
+  Future<void> _shareLink(BuildContext context) async {
+    final Uri? url = ShareCodec.buildUrl(Uri.base, controller.currentSettings);
+    if (url != null) {
+      await Clipboard.setData(ClipboardData(text: url.toString()));
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 320,
+        duration: const Duration(seconds: 2),
+        content: Text(
+          url == null
+              ? "Too large to share as a link. Download the file instead."
+              : "Share link copied to clipboard",
+        ),
+      ),
     );
   }
 
@@ -138,46 +187,24 @@ class OutputPanel extends StatelessWidget {
   }
 }
 
-class _CopyButton extends StatefulWidget {
-  const _CopyButton({required this.text, required this.enabled});
+class _CopyButton extends StatelessWidget {
+  const _CopyButton({required this.controller});
 
-  final String text;
-  final bool enabled;
-
-  @override
-  State<_CopyButton> createState() => _CopyButtonState();
-}
-
-class _CopyButtonState extends State<_CopyButton> {
-  bool _copied = false;
-  Timer? _reset;
-
-  @override
-  void dispose() {
-    _reset?.cancel();
-    super.dispose();
-  }
-
-  void _copy() {
-    Clipboard.setData(ClipboardData(text: widget.text));
-    setState(() => _copied = true);
-    _reset?.cancel();
-    _reset = Timer(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _copied = false);
-    });
-  }
+  final ConverterController controller;
 
   @override
   Widget build(BuildContext context) {
+    final bool copied = controller.copied;
     return Semantics(
       button: true,
       liveRegion: true,
-      label: _copied ? "Copied to clipboard" : "Copy class code to clipboard",
+      label: copied ? "Copied to clipboard" : "Copy class code to clipboard",
       child: IconButton(
-        tooltip: _copied ? "Copied" : "Copy to clipboard",
-        onPressed: widget.enabled ? _copy : null,
-        icon: Icon(_copied ? Icons.check : Icons.copy),
-        color: _copied ? Theme.of(context).colorScheme.primary : null,
+        tooltip:
+            copied ? "Copied" : "Copy to clipboard (${ShortcutLabels.copy})",
+        onPressed: controller.dartClass.isEmpty ? null : controller.copyOutput,
+        icon: Icon(copied ? Icons.check : Icons.copy),
+        color: copied ? Theme.of(context).colorScheme.primary : null,
       ),
     );
   }

@@ -7,6 +7,8 @@ class GeneratorOptions {
     this.equality = false,
     this.detectDates = false,
     this.allNullable = false,
+    this.detectMaps = true,
+    this.classRenames = const {},
   });
 
   factory GeneratorOptions.fromMap(Map<String, dynamic> json) {
@@ -18,6 +20,8 @@ class GeneratorOptions {
       equality: json["equality"] as bool? ?? false,
       detectDates: json["detectDates"] as bool? ?? false,
       allNullable: json["allNullable"] as bool? ?? false,
+      detectMaps: json["detectMaps"] as bool? ?? true,
+      classRenames: _parseRenames(json["classRenames"]),
     );
   }
 
@@ -28,6 +32,10 @@ class GeneratorOptions {
   final bool equality;
   final bool detectDates;
   final bool allNullable;
+  final bool detectMaps;
+
+  /// Maps a generated nested class name to the name the user chose.
+  final Map<String, String> classRenames;
 
   bool get effectiveParseList => fromJson && parseList;
 
@@ -39,6 +47,8 @@ class GeneratorOptions {
     bool? equality,
     bool? detectDates,
     bool? allNullable,
+    bool? detectMaps,
+    Map<String, String>? classRenames,
   }) {
     return GeneratorOptions(
       fromJson: fromJson ?? this.fromJson,
@@ -48,6 +58,8 @@ class GeneratorOptions {
       equality: equality ?? this.equality,
       detectDates: detectDates ?? this.detectDates,
       allNullable: allNullable ?? this.allNullable,
+      detectMaps: detectMaps ?? this.detectMaps,
+      classRenames: classRenames ?? this.classRenames,
     );
   }
 
@@ -60,6 +72,17 @@ class GeneratorOptions {
       "equality": equality,
       "detectDates": detectDates,
       "allNullable": allNullable,
+      "detectMaps": detectMaps,
+      "classRenames": classRenames,
+    };
+  }
+
+  static Map<String, String> _parseRenames(Object? value) {
+    if (value is! Map) return const {};
+    return {
+      for (final MapEntry<Object?, Object?> e in value.entries)
+        if (e.key is String && e.value is String)
+          e.key! as String: e.value! as String,
     };
   }
 }

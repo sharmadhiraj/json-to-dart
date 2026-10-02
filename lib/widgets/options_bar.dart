@@ -6,7 +6,7 @@ import 'package:json_to_dart/widgets/option_chip.dart';
 class OptionsBar extends StatelessWidget {
   const OptionsBar({required this.controller, required this.wide, super.key});
 
-  static const double _classFieldWidth = 260;
+  static const double _classFieldWidth = 180;
 
   final ConverterController controller;
   final bool wide;
@@ -84,7 +84,12 @@ class OptionsBar extends StatelessWidget {
           onChanged: (v) => update(o.copyWith(detectDates: v)),
         ),
         OptionChip(
-          label: "All fields nullable",
+          label: "Detect maps",
+          selected: o.detectMaps,
+          onChanged: (v) => update(o.copyWith(detectMaps: v)),
+        ),
+        OptionChip(
+          label: "All nullable",
           selected: o.allNullable,
           onChanged: (v) => update(o.copyWith(allNullable: v)),
         ),

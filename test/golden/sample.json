@@ -11,6 +11,9 @@
   "tags": ["admin", "beta"],
   "matrix": [[1, 2], [3]],
   "mixed": [1, "a"],
+  "meta": {},
+  "scores": {"2024-01": {"value": 1, "tags": ["x"]}, "2024-02": {"value": 2}},
+  "refs": {"u1": [1, 2], "u2": [3]},
   "orders": [
     {"id": 10, "total": 25.0, "note": null, "lines": [{"sku": "a"}]},
     {"id": 11, "total": 40, "extra": true}
