@@ -1,7 +1,15 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:json_to_dart/generator/dart_generator.dart';
+import 'package:json_to_dart/generator/generator_options.dart';
+import 'package:json_to_dart/generator/naming.dart';
+import 'package:json_to_dart/models/app_settings.dart';
+import 'package:json_to_dart/services/settings_service.dart';
 import 'package:json_to_dart/util/constants.dart';
-import 'package:json_to_dart/util/util.dart';
+import 'package:json_to_dart/util/web_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,34 +19,108 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _dartClass = "";
-  final TextEditingController _jsonStringController = TextEditingController();
+  static const double _wideLayoutMinWidth = 800;
+  static const Duration _debounceDuration = Duration(milliseconds: 300);
+
+  final TextEditingController _jsonController = TextEditingController();
   final TextEditingController _classNameController = TextEditingController();
-  bool _isValidJsonString = true;
-  bool _fromJson = true;
-  bool _toJson = true;
-  bool _parseList = true;
+  Timer? _debounce;
+  String _dartClass = "";
+  String? _error;
+  GeneratorOptions _options = const GeneratorOptions();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final Map<String, dynamic> settings = await Util.loadSettings();
-      setState(() {
-        _jsonStringController.text = settings["jsonCode"];
-        _classNameController.text = settings["dartClass"];
-        _fromJson = settings["fromJson"];
-        _toJson = settings["toJson"];
-        _parseList = settings["parseList"];
-      });
-      _update();
+    _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _jsonController.dispose();
+    _classNameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSettings() async {
+    final AppSettings settings = await SettingsService.load();
+    if (!mounted) return;
+    _jsonController.text = settings.jsonCode;
+    _classNameController.text = settings.className;
+    _options = settings.options;
+    _regenerate();
+  }
+
+  void _scheduleUpdate() {
+    _debounce?.cancel();
+    _debounce = Timer(_debounceDuration, _regenerate);
+  }
+
+  void _setOptions(GeneratorOptions options) {
+    _options = options;
+    _regenerate();
+  }
+
+  void _regenerate() {
+    _debounce?.cancel();
+    final String jsonText = _jsonController.text;
+    String dartClass = "";
+    String? error;
+    if (jsonText.trim().isNotEmpty) {
+      try {
+        dartClass = DartGenerator.generate(
+          jsonDecode(jsonText),
+          _classNameController.text,
+          options: _options,
+        );
+      } on FormatException {
+        error = "Invalid JSON";
+      } on GeneratorException catch (e) {
+        error = e.message;
+      }
+    }
+    setState(() {
+      _dartClass = dartClass;
+      _error = error;
     });
+    if (error == null) {
+      unawaited(
+        SettingsService.save(
+          AppSettings(
+            className: _classNameController.text,
+            jsonCode: jsonText,
+            options: _options,
+          ),
+        ),
+      );
+    }
+  }
+
+  String get _fileName => "${Naming.fileName(_classNameController.text)}.dart";
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: _dartClass));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Copied to clipboard"),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _buildHeader(),
+          const Divider(),
+          _buildMainSection(),
+          const Divider(),
+          _buildFooter(),
+        ],
+      ),
     );
   }
 
@@ -46,14 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return const Padding(
       padding: EdgeInsets.fromLTRB(16, 24, 16, 4),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             Constant.appName,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 32),
           ),
           Text(
-            "Convert JSON to Dart with ease! Supports nested classes and includes fromJson, toJson, and parseList methods.",
+            Constant.appDescription,
+            textAlign: TextAlign.center,
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
@@ -62,206 +144,170 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFooter() {
-    return const InkWell(
-      onTap: Util.navigateToDeveloperPage,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
-        child: Text(
-          "Developed & maintained by Dhiraj Sharma",
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return Semantics(
+      button: true,
+      label: "Open developer profile",
+      child: InkWell(
+        onTap: () => WebUtils.openUrl(Constant.developerUrl),
+        child: const Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: Text(
+            "Developed & maintained by ${Constant.developerName}",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildBody() {
-    return Column(
-      children: [
-        _buildHeader(),
-        const Divider(),
-        _buildMainSection(),
-        const Divider(),
-        _buildFooter(),
-      ],
     );
   }
 
   Widget _buildMainSection() {
     return Expanded(
       child: Center(
-        child: Container(
+        child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1200),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildJsonInputSection(),
-              _buildDartClassOutputSection(),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final List<Widget> panels = [
+                Expanded(child: _buildInputSection()),
+                Expanded(child: _buildOutputSection()),
+              ];
+              return constraints.maxWidth >= _wideLayoutMinWidth
+                  ? Row(children: panels)
+                  : Column(children: panels);
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildJsonInputSection() {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildClassNameTextField(),
-            const SizedBox(height: 12),
-            _buildJsonStringTextField(),
-            const SizedBox(height: 12),
-            _buildChooseOutputOptions(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClassNameTextField() {
-    return TextField(
-      controller: _classNameController,
-      decoration: const InputDecoration(
-        labelText: "Class Name",
-        border: OutlineInputBorder(),
-      ),
-      onChanged: (text) => _update(),
-    );
-  }
-
-  Widget _buildJsonStringTextField() {
-    return Expanded(
-      child: TextField(
-        controller: _jsonStringController,
-        autofocus: true,
-        keyboardType: TextInputType.multiline,
-        maxLines: 100,
-        onChanged: (text) => _update(),
-        decoration: InputDecoration(
-          hintText: "Enter JSON here",
-          border: const OutlineInputBorder(),
-          errorText: _isValidJsonString ? null : "Invalid JSON",
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChooseOutputOptions() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Generate fromJson method'),
-          value: _fromJson,
-          onChanged: (value) {
-            setState(() => _fromJson = value ?? _fromJson);
-            _update();
-          },
-        ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Generate toJson method'),
-          value: _toJson,
-          onChanged: (value) {
-            setState(() => _toJson = value ?? _toJson);
-            _update();
-          },
-        ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Generate parseList method'),
-          value: _parseList,
-          onChanged: (value) {
-            setState(() => _parseList = value ?? _parseList);
-            _update();
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDartClassOutputSection() {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        height: double.maxFinite,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildButtons(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  width: double.maxFinite,
-                  child: Text(
-                    _dartClass,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
+  Widget _buildInputSection() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _classNameController,
+            decoration: const InputDecoration(
+              labelText: "Class Name",
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => _scheduleUpdate(),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: TextField(
+              controller: _jsonController,
+              autofocus: true,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              style: const TextStyle(fontFamily: "monospace"),
+              onChanged: (_) => _scheduleUpdate(),
+              decoration: InputDecoration(
+                hintText: "Enter JSON here",
+                border: const OutlineInputBorder(),
+                errorText: _error,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildButtons() {
-    final String fileName =
-        "${Util.convertToValidFileName(Util.getClassName(_classNameController.text))}.dart";
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, right: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          IconButton(
-            tooltip: "Download $fileName file",
-            onPressed: () => Util.initiateDownload(fileName, _dartClass),
-            icon: const Icon(Icons.download),
           ),
-          IconButton(
-            tooltip: "Copy Class Code to Clipboard",
-            onPressed: () => Clipboard.setData(ClipboardData(text: _dartClass)),
-            icon: const Icon(Icons.copy),
+          const SizedBox(height: 12),
+          _buildOptionTile(
+            "Generate fromJson method",
+            _options.fromJson,
+            (v) => _setOptions(_options.copyWith(fromJson: v)),
+          ),
+          _buildOptionTile(
+            "Generate toJson method",
+            _options.toJson,
+            (v) => _setOptions(_options.copyWith(toJson: v)),
+          ),
+          _buildOptionTile(
+            "Generate parseList method",
+            _options.parseList,
+            _options.fromJson
+                ? (v) => _setOptions(_options.copyWith(parseList: v))
+                : null,
           ),
         ],
       ),
     );
   }
 
-  void _update() {
-    String jsonString = _jsonStringController.text;
-    if (jsonString.isEmpty) jsonString = "{}";
-    setState(
-      () => _isValidJsonString = Util.checkIfValidJsonString(jsonString),
+  Widget _buildOptionTile(
+    String title,
+    bool value,
+    ValueChanged<bool>? onChanged,
+  ) {
+    return Semantics(
+      label: title,
+      child: CheckboxListTile(
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        title: Text(title),
+        value: value,
+        onChanged:
+            onChanged == null ? null : (v) => onChanged(v ?? value),
+      ),
     );
-    if (!_isValidJsonString) return;
-    setState(() {
-      _dartClass = Util.generateDartClass(
-        jsonString,
-        _classNameController.text,
-        _fromJson,
-        _toJson,
-        _parseList,
-      );
-    });
-    Util.saveSettings(
-      dartClass: _classNameController.text,
-      jsonCode: jsonString,
-      fromJson: _fromJson,
-      toJson: _toJson,
-      parseList: _parseList,
+  }
+
+  Widget _buildOutputSection() {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final bool hasOutput = _dartClass.isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 8, right: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Semantics(
+                  button: true,
+                  label: "Download $_fileName",
+                  child: IconButton(
+                    tooltip: "Download $_fileName file",
+                    onPressed: hasOutput
+                        ? () => WebUtils.downloadFile(_fileName, _dartClass)
+                        : null,
+                    icon: const Icon(Icons.download),
+                  ),
+                ),
+                Semantics(
+                  button: true,
+                  label: "Copy class code to clipboard",
+                  child: IconButton(
+                    tooltip: "Copy Class Code to Clipboard",
+                    onPressed: hasOutput ? _copy : null,
+                    icon: const Icon(Icons.copy),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(8),
+              child: SizedBox(
+                width: double.infinity,
+                child: SelectableText(
+                  _dartClass,
+                  style: const TextStyle(fontFamily: "monospace", fontSize: 14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,0 +1,98 @@
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:json_to_dart/generator/dart_generator.dart';
+import 'package:json_to_dart/generator/generator_options.dart';
+
+String gen(
+  String json, {
+  String name = "Root",
+  GeneratorOptions options = const GeneratorOptions(),
+}) =>
+    DartGenerator.generate(jsonDecode(json), name, options: options);
+
+void main() {
+  test("generates primitives with required fields", () {
+    final String out = gen('{"name":"a","age":1,"score":1.5,"ok":true}');
+    expect(out, contains("final String name;"));
+    expect(out, contains("final int age;"));
+    expect(out, contains("final double score;"));
+    expect(out, contains("final bool ok;"));
+    expect(out, contains("required this.name,"));
+    expect(out, contains("(json[\"score\"] as num).toDouble()"));
+  });
+
+  test("null values become optional dynamic", () {
+    final String out = gen('{"a":null}');
+    expect(out, contains("final dynamic a;"));
+    expect(out, contains("    this.a,"));
+    expect(out, isNot(contains("required this.a")));
+  });
+
+  test("nested objects are generated once, parent first", () {
+    final String out = gen('{"user":{"id":1},"owner":{"user":{"id":2}}}');
+    expect(
+      "class User".allMatches(out).length,
+      1,
+    );
+    expect(out.indexOf("class Root"), lessThan(out.indexOf("class User")));
+  });
+
+  test("list of objects merges elements and marks missing keys nullable", () {
+    final String out = gen('{"items":[{"a":1,"b":"x"},{"a":2.5}]}');
+    expect(out, contains("final List<Items> items;"));
+    expect(out, contains("final double a;"));
+    expect(out, contains("final String? b;"));
+    expect(out, contains("Items.parseList(json[\"items\"])"));
+  });
+
+  test("root array merges all elements", () {
+    final String out = gen('[{"a":1},{"a":2,"b":true}]');
+    expect(out, contains("final int a;"));
+    expect(out, contains("final bool? b;"));
+  });
+
+  test("mixed types fall back to dynamic", () {
+    final String out = gen('{"a":[1,"x"]}');
+    expect(out, contains("final List<dynamic> a;"));
+  });
+
+  test("nested lists", () {
+    final String out = gen('{"m":[[1,2],[3]]}');
+    expect(out, contains("final List<List<int>> m;"));
+    expect(out, contains("(e) => (e as List)"));
+  });
+
+  test("escapes keys and avoids reserved field names", () {
+    final String out = gen(r'{"class":1,"a\"b":2,"$x":3}');
+    expect(out, contains("final int classValue;"));
+    expect(out, contains(r'json["a\"b"]'));
+    expect(out, contains(r'json["\$x"]'));
+  });
+
+  test("duplicate sanitized names are deduplicated", () {
+    final String out = gen('{"user_id":1,"userId":2}');
+    expect(out, contains("final int userId;"));
+    expect(out, contains("final int userId2;"));
+  });
+
+  test("options toggle methods", () {
+    final String out = gen(
+      '{"a":1}',
+      options: const GeneratorOptions(fromJson: false, toJson: false),
+    );
+    expect(out, isNot(contains("fromJson")));
+    expect(out, isNot(contains("toJson")));
+    expect(out, isNot(contains("parseList")));
+  });
+
+  test("empty object", () {
+    expect(gen("{}"), contains("const Root();"));
+  });
+
+  test("unsupported roots throw", () {
+    expect(() => gen("[]"), throwsA(isA<GeneratorException>()));
+    expect(() => gen("[1,2]"), throwsA(isA<GeneratorException>()));
+    expect(() => gen("5"), throwsA(isA<GeneratorException>()));
+  });
+}
