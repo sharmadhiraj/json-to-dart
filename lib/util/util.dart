@@ -21,7 +21,7 @@ class Util {
     bool parseList,
   ) {
     try {
-      dynamic jsonData = jsonDecode(jsonString);
+      final dynamic jsonData = jsonDecode(jsonString);
       if (jsonData is Map<String, dynamic>) {
         final Map<String, Map<String, dynamic>> nestedMaps =
             _extractNestedMapFromMap(className, jsonData);
@@ -39,7 +39,12 @@ class Util {
       } else if (jsonData is List) {
         if (jsonData.isNotEmpty) {
           return generateDartClass(
-              jsonEncode(jsonData[0]), className, fromJson, toJson, parseList);
+            jsonEncode(jsonData[0]),
+            className,
+            fromJson,
+            toJson,
+            parseList,
+          );
         }
       }
     } catch (_) {}
@@ -77,55 +82,67 @@ class Util {
     bool toJson,
     bool parseList,
   ) {
-    StringBuffer classBuffer = StringBuffer();
+    final StringBuffer classBuffer = StringBuffer();
     className = getClassName(className);
 
     classBuffer.writeln("class $className {");
-    jsonMap.forEach((key, value) => classBuffer.writeln(
-        " final ${_getDartType(key, value)} ${_convertToValidVariableName(key)};"));
-    classBuffer.writeln("");
-
-    classBuffer.writeln("const $className({");
-    jsonMap.forEach((key, value) => classBuffer
-        .writeln("   required this.${_convertToValidVariableName(key)},"));
-    classBuffer.writeln(" });");
-    classBuffer.writeln("");
+    jsonMap.forEach(
+      (key, value) => classBuffer.writeln(
+        " final ${_getDartType(key, value)} ${_convertToValidVariableName(key)};",
+      ),
+    );
+    classBuffer
+      ..writeln()
+      ..writeln("const $className({");
+    jsonMap.forEach(
+      (key, value) => classBuffer
+          .writeln("   required this.${_convertToValidVariableName(key)},"),
+    );
+    classBuffer
+      ..writeln(" });")
+      ..writeln();
 
     if (fromJson) {
       classBuffer
-          .writeln(" factory $className.fromJson(Map<String, dynamic> json) {");
-      classBuffer.writeln("   return $className(");
+        ..writeln(" factory $className.fromJson(Map<String, dynamic> json) {")
+        ..writeln("   return $className(");
       jsonMap.forEach((key, value) {
         classBuffer.writeln(
-            "     ${_convertToValidVariableName(key)}: ${_convertFromJsonMapper(key, value)},");
+          "     ${_convertToValidVariableName(key)}: ${_convertFromJsonMapper(key, value)},",
+        );
       });
-      classBuffer.writeln("   );");
-      classBuffer.writeln(" }");
-      classBuffer.writeln("");
+      classBuffer
+        ..writeln("   );")
+        ..writeln(" }")
+        ..writeln();
     }
 
     if (toJson) {
-      classBuffer.writeln(" Map<String, dynamic> toJson() {");
-      classBuffer.writeln("   return {");
+      classBuffer
+        ..writeln(" Map<String, dynamic> toJson() {")
+        ..writeln("   return {");
       jsonMap.forEach((key, value) {
         classBuffer
             .writeln("     \"$key\": ${_convertToJsonMapper(key, value)},");
       });
-      classBuffer.writeln("   };");
-      classBuffer.writeln(" }");
-      classBuffer.writeln();
+      classBuffer
+        ..writeln("   };")
+        ..writeln(" }")
+        ..writeln();
     }
 
     if (parseList) {
       classBuffer
-          .writeln(" static List<$className> parseList(dynamic jsonList) {");
-      classBuffer.writeln(
-          "   if (jsonList == null || jsonList is! List || jsonList.isEmpty) {");
-      classBuffer.writeln("     return [];");
-      classBuffer.writeln("   }");
-      classBuffer.writeln(
-          "   return jsonList.map((json) => $className.fromJson(json)).toList();");
-      classBuffer.writeln(" }");
+        ..writeln(" static List<$className> parseList(dynamic jsonList) {")
+        ..writeln(
+          "   if (jsonList == null || jsonList is! List || jsonList.isEmpty) {",
+        )
+        ..writeln("     return [];")
+        ..writeln("   }")
+        ..writeln(
+          "   return jsonList.map((json) => $className.fromJson(json)).toList();",
+        )
+        ..writeln(" }");
     }
 
     classBuffer.writeln("}");
@@ -197,23 +214,25 @@ class Util {
   static String _convertToValidClassName(String input) {
     input = input
         .replaceAllMapped(
-          RegExp(r'[A-Z]'),
+          RegExp('[A-Z]'),
           (match) => ' ${match.group(0)!.toLowerCase()}',
         )
         .replaceAllMapped(
-          RegExp(r'[0-9]'),
+          RegExp('[0-9]'),
           (match) => '${match.group(0)} ',
         )
-        .replaceAll(RegExp(r'[^a-zA-Z0-9]'), ' ')
+        .replaceAll(RegExp('[^a-zA-Z0-9]'), ' ')
         .trim();
     if (input.isEmpty) return input;
     input = input
         .split(" ")
-        .map((e) => e.length < 2
-            ? e.toLowerCase()
-            : ("${e[0].toUpperCase()}${e.substring(1).toLowerCase()}"))
+        .map(
+          (e) => e.length < 2
+              ? e.toLowerCase()
+              : "${e[0].toUpperCase()}${e.substring(1).toLowerCase()}",
+        )
         .join();
-    if (RegExp(r'^[0-9]').hasMatch(input)) {
+    if (RegExp('^[0-9]').hasMatch(input)) {
       input = "A$input";
     }
     return input;
@@ -223,13 +242,13 @@ class Util {
     input = _convertToValidClassName(input);
     return input.length < 2
         ? input.toLowerCase()
-        : ("${input[0].toLowerCase()}${input.substring(1)}");
+        : "${input[0].toLowerCase()}${input.substring(1)}";
   }
 
   static String convertToValidFileName(String input) {
     input = _convertToValidVariableName(input);
     return input.replaceAllMapped(
-      RegExp(r'[A-Z0-9]'),
+      RegExp('[A-Z0-9]'),
       (match) => '_${match.group(0)!.toLowerCase()}',
     );
   }
@@ -239,7 +258,7 @@ class Util {
   }
 
   static void initiateDownload(String fileName, String content) {
-    final encodedContent = Uri.encodeComponent(content);
+    final dynamic encodedContent = Uri.encodeComponent(content);
     web.HTMLAnchorElement()
       ..href = 'data:text/plain;charset=utf-8,$encodedContent'
       ..target = '_blank'

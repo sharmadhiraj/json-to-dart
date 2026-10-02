@@ -62,9 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFooter() {
-    return InkWell(
-      onTap: () => Util.navigateToDeveloperPage(),
-      child: const Padding(
+    return const InkWell(
+      onTap: Util.navigateToDeveloperPage,
+      child: Padding(
         padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
         child: Text(
           "Developed & maintained by Dhiraj Sharma",
@@ -105,7 +105,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildJsonInputSection() {
     return Expanded(
-      flex: 1,
       child: Container(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -126,7 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildClassNameTextField() {
     return TextField(
       controller: _classNameController,
-      maxLines: 1,
       decoration: const InputDecoration(
         labelText: "Class Name",
         border: OutlineInputBorder(),
@@ -158,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CheckboxListTile(
-          contentPadding: EdgeInsets.all(0),
+          contentPadding: EdgeInsets.zero,
           title: const Text('Generate fromJson method'),
           value: _fromJson,
           onChanged: (value) {
@@ -167,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         CheckboxListTile(
-          contentPadding: EdgeInsets.all(0),
+          contentPadding: EdgeInsets.zero,
           title: const Text('Generate toJson method'),
           value: _toJson,
           onChanged: (value) {
@@ -176,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         CheckboxListTile(
-          contentPadding: EdgeInsets.all(0),
+          contentPadding: EdgeInsets.zero,
           title: const Text('Generate parseList method'),
           value: _parseList,
           onChanged: (value) {
@@ -190,7 +188,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDartClassOutputSection() {
     return Expanded(
-      flex: 1,
       child: Container(
         margin: const EdgeInsets.all(16),
         height: double.maxFinite,
@@ -237,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: "Copy Class Code to Clipboard",
             onPressed: () => Clipboard.setData(ClipboardData(text: _dartClass)),
             icon: const Icon(Icons.copy),
-          )
+          ),
         ],
       ),
     );
@@ -247,7 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
     String jsonString = _jsonStringController.text;
     if (jsonString.isEmpty) jsonString = "{}";
     setState(
-        () => _isValidJsonString = Util.checkIfValidJsonString(jsonString));
+      () => _isValidJsonString = Util.checkIfValidJsonString(jsonString),
+    );
     if (!_isValidJsonString) return;
     setState(() {
       _dartClass = Util.generateDartClass(
