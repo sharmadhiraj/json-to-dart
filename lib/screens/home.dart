@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:json_to_dart/controllers/converter_controller.dart';
 import 'package:json_to_dart/data/app_settings.dart';
+import 'package:json_to_dart/data/settings_service.dart';
 import 'package:json_to_dart/data/share_codec.dart';
 import 'package:json_to_dart/util/web_utils.dart';
 import 'package:json_to_dart/widgets/app_footer.dart';
@@ -13,9 +14,14 @@ import 'package:json_to_dart/widgets/options_bar.dart';
 import 'package:json_to_dart/widgets/output_panel.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({required this.onToggleTheme, super.key});
+  const HomeScreen({
+    required this.onToggleTheme,
+    this.settingsService = const SettingsService(),
+    super.key,
+  });
 
   final ValueChanged<Brightness> onToggleTheme;
+  final SettingsService settingsService;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,7 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _maxContentWidth = 1200;
   static const double _narrowPanelHeight = 460;
 
-  final ConverterController _controller = ConverterController();
+  late final ConverterController _controller =
+      ConverterController(settingsService: widget.settingsService);
   late final void Function() _removeDropListener;
 
   @override
@@ -123,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: wide ? MainAxisSize.max : MainAxisSize.min,
             children: [
-              OptionsBar(controller: _controller, wide: wide),
+              OptionsBar(controller: _controller),
               const SizedBox(height: 16),
               if (wide)
                 Expanded(

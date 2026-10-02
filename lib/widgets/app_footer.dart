@@ -7,16 +7,22 @@ class AppFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: "Open developer profile",
-      child: InkWell(
-        onTap: () => WebUtils.openUrl(Constant.developerUrl),
-        child: const Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: Text(
-            "Developed & maintained by ${Constant.developerName}",
-            style: TextStyle(fontWeight: FontWeight.bold),
+    final ThemeData theme = Theme.of(context);
+    final TextStyle? style = theme.textTheme.bodySmall
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Semantics(
+        button: true,
+        label: "Open developer profile",
+        child: InkWell(
+          onTap: () => WebUtils.openUrl(Constant.developerUrl),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            child: Text(
+              "Made by ${Constant.developerName}",
+              style: style,
+            ),
           ),
         ),
       ),

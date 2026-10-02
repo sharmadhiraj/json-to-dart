@@ -9,6 +9,7 @@ class SettingsService {
 
   static const String _key = "jsonToDartSettings";
   static const String _themeKey = "jsonToDartThemeMode";
+  static const String _historyKey = "jsonToDartHistory";
 
   Future<AppSettings> load() async {
     try {
@@ -48,6 +49,30 @@ class SettingsService {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString(_themeKey, mode.name);
+    } catch (_) {}
+  }
+
+  Future<List<AppSettings>> loadHistory() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? stored = prefs.getString(_historyKey);
+      if (stored == null) return [];
+      return [
+        for (final Object? item in jsonDecode(stored) as List<Object?>)
+          AppSettings.fromJson(item! as Map<String, dynamic>),
+      ];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveHistory(List<AppSettings> history) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _historyKey,
+        jsonEncode([for (final AppSettings h in history) h.toJson()]),
+      );
     } catch (_) {}
   }
 }

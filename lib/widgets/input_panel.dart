@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:json_to_dart/controllers/converter_controller.dart';
+import 'package:json_to_dart/data/app_settings.dart';
 import 'package:json_to_dart/util/constants.dart';
 import 'package:json_to_dart/util/shortcut_labels.dart';
 import 'package:json_to_dart/util/web_utils.dart';
@@ -8,8 +9,6 @@ import 'package:json_to_dart/widgets/panel_card.dart';
 
 class InputPanel extends StatelessWidget {
   const InputPanel({required this.controller, super.key});
-
-  static const double _compactBelowWidth = 560;
 
   final ConverterController controller;
 
@@ -25,55 +24,66 @@ class InputPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool compact = constraints.maxWidth < _compactBelowWidth;
-        return ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) => PanelCard(
-            title: "JSON",
-            actions: _buildActions(compact),
-            footer: controller.error == null
-                ? null
-                : _ErrorBanner(message: controller.error!),
-            child: TextField(
-              controller: controller.jsonController,
-              focusNode: controller.jsonFocusNode,
-              autofocus: true,
-              keyboardType: TextInputType.multiline,
-              maxLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              style: const TextStyle(fontFamily: "monospace"),
-              onChanged: (_) => controller.onInputChanged(),
-              decoration: const InputDecoration(
-                hintText: "Enter JSON here, or drop a .json file",
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.all(12),
-              ),
-            ),
-          ),
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final bool large = controller.isLargeInput;
+        return PanelCard(
+          title: "JSON",
+          actions: _buildActions(large),
+          footer: controller.error == null
+              ? null
+              : _ErrorBanner(message: controller.error!),
+          child:
+              large ? _LargeInputView(controller: controller) : _buildEditor(),
         );
       },
     );
   }
 
-  List<Widget> _buildActions(bool compact) {
+  Widget _buildEditor() {
+    return Semantics(
+      textField: true,
+      label: "JSON input",
+      child: TextField(
+        controller: controller.jsonController,
+        focusNode: controller.jsonFocusNode,
+        autofocus: true,
+        keyboardType: TextInputType.multiline,
+        maxLines: null,
+        expands: true,
+        textAlignVertical: TextAlignVertical.top,
+        style: const TextStyle(fontFamily: "monospace"),
+        onChanged: (_) => controller.onInputChanged(),
+        decoration: const InputDecoration(
+          hintText: "Enter JSON here, or drop a .json file",
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(12),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildActions(bool large) {
     Widget action(
       String label,
       IconData icon,
-      VoidCallback onPressed, {
+      VoidCallback? onPressed, {
       String? shortcut,
     }) {
-      return _ToolbarButton(
-        label: label,
-        shortcut: shortcut,
-        icon: icon,
-        compact: compact,
-        onPressed: () {
-          onPressed();
-          controller.focusInput();
-        },
+      return Semantics(
+        button: true,
+        label: "$label JSON",
+        child: IconButton(
+          tooltip: shortcut == null ? label : "$label ($shortcut)",
+          onPressed: onPressed == null
+              ? null
+              : () {
+                  onPressed();
+                  controller.focusInput();
+                },
+          icon: Icon(icon, size: 22),
+        ),
       );
     }
 
@@ -81,7 +91,7 @@ class InputPanel extends StatelessWidget {
       action(
         "Format",
         Icons.format_align_left,
-        controller.formatJson,
+        large ? null : controller.formatJson,
         shortcut: ShortcutLabels.format,
       ),
       action(
@@ -91,8 +101,126 @@ class InputPanel extends StatelessWidget {
       ),
       action("Paste", Icons.content_paste, _paste),
       action("Upload", Icons.upload_file, _upload),
+      _HistoryButton(controller: controller),
       action("Clear", Icons.clear, controller.clear),
     ];
+  }
+}
+
+class _HistoryButton extends StatelessWidget {
+  const _HistoryButton({required this.controller});
+
+  static const int _clearHistory = -1;
+  static const int _previewChars = 44;
+
+  final ConverterController controller;
+
+  String _label(AppSettings entry) {
+    final String name =
+        entry.className.trim().isEmpty ? "AutoGenerated" : entry.className;
+    final String compact = entry.jsonCode.replaceAll(RegExp(r"\s+"), " ");
+    final String preview = compact.length > _previewChars
+        ? "${compact.substring(0, _previewChars)}…"
+        : compact;
+    return "$name  $preview";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<AppSettings> history = controller.history;
+    return Semantics(
+      button: true,
+      label: "Recent JSON",
+      child: PopupMenuButton<int>(
+        tooltip: "Recent inputs",
+        enabled: history.isNotEmpty,
+        icon: const Icon(Icons.history, size: 22),
+        onSelected: (index) {
+          if (index == _clearHistory) {
+            controller.clearHistory();
+          } else {
+            controller.restore(index);
+          }
+          controller.focusInput();
+        },
+        itemBuilder: (context) => [
+          for (int i = 0; i < history.length; i++)
+            PopupMenuItem<int>(
+              value: i,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Text(
+                  _label(history[i]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: "monospace", fontSize: 13),
+                ),
+              ),
+            ),
+          const PopupMenuDivider(),
+          const PopupMenuItem<int>(
+            value: _clearHistory,
+            child: Text("Clear recent inputs"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LargeInputView extends StatelessWidget {
+  const _LargeInputView({required this.controller});
+
+  static const int _previewChars = 3000;
+
+  final ConverterController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final String text = controller.jsonController.text;
+    final String size = text.length >= 1000000
+        ? "${(text.length / 1000000).toStringAsFixed(1)} MB"
+        : "${(text.length / 1000).round()} KB";
+    final String preview = text.length > _previewChars
+        ? "${text.substring(0, _previewChars)}\n…"
+        : text;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: theme.colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Large input ($size). The editor is turned off to keep the "
+                  "page responsive. Paste, upload or drop a file to replace "
+                  "it, or clear it to type again.",
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: SelectableText(
+              preview,
+              style: TextStyle(
+                fontFamily: "monospace",
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -112,7 +240,7 @@ class _ErrorBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            Icon(Icons.error_outline, size: 18, color: colors.error),
+            Icon(Icons.error_outline, size: 18, color: colors.onErrorContainer),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -123,45 +251,6 @@ class _ErrorBanner extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ToolbarButton extends StatelessWidget {
-  const _ToolbarButton({
-    required this.label,
-    required this.icon,
-    required this.compact,
-    required this.onPressed,
-    this.shortcut,
-  });
-
-  final String label;
-  final String? shortcut;
-  final IconData icon;
-  final bool compact;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: "$label JSON",
-      child: compact
-          ? IconButton(
-              tooltip: shortcut == null ? label : "$label ($shortcut)",
-              visualDensity: VisualDensity.compact,
-              onPressed: onPressed,
-              icon: Icon(icon, size: 20),
-            )
-          : Tooltip(
-              message: shortcut == null ? label : "$label ($shortcut)",
-              child: TextButton.icon(
-                onPressed: onPressed,
-                icon: Icon(icon, size: 18),
-                label: Text(label),
-              ),
-            ),
     );
   }
 }

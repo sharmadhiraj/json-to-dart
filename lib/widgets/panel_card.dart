@@ -4,14 +4,14 @@ class PanelCard extends StatelessWidget {
   const PanelCard({
     required this.title,
     required this.child,
-    this.subtitle,
+    this.headerContent,
     this.actions = const [],
     this.footer,
     super.key,
   });
 
   final String title;
-  final String? subtitle;
+  final Widget? headerContent;
   final List<Widget> actions;
   final Widget child;
   final Widget? footer;
@@ -41,16 +41,15 @@ class PanelCard extends StatelessWidget {
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                if (subtitle != null)
+                if (headerContent != null)
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        subtitle!,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.hintColor,
-                          fontFamily: "monospace",
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 220),
+                          child: headerContent,
                         ),
                       ),
                     ),

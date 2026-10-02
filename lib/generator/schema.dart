@@ -19,6 +19,7 @@ class FieldType {
     this.nullable = false,
     this.className,
     this.element,
+    this.fromString = false,
   });
 
   static const FieldType unknown = FieldType(JsonKind.unknown);
@@ -31,6 +32,9 @@ class FieldType {
   final bool nullable;
   final String? className;
   final FieldType? element;
+
+  /// A number delivered as a JSON string, such as "12.50".
+  final bool fromString;
 
   bool get isDynamic =>
       kind == JsonKind.dynamic ||
@@ -72,6 +76,7 @@ class FieldType {
         nullable: true,
         className: className,
         element: element,
+        fromString: fromString,
       );
 
   FieldType mergeWith(FieldType other) {
@@ -90,17 +95,23 @@ class FieldType {
       if (kind == JsonKind.object && className != other.className) {
         return dynamicType;
       }
+      if (fromString != other.fromString) return dynamicType;
       return FieldType(
         kind,
         nullable: eitherNullable,
         className: className,
-        element:
-            kind == JsonKind.list ? element!.mergeWith(other.element!) : null,
+        element: isCollection ? element!.mergeWith(other.element!) : null,
+        fromString: fromString,
       );
     }
     final Set<JsonKind> kinds = {kind, other.kind};
     if (kinds.containsAll({JsonKind.integer, JsonKind.decimal})) {
-      return FieldType(JsonKind.decimal, nullable: eitherNullable);
+      if (fromString != other.fromString) return dynamicType;
+      return FieldType(
+        JsonKind.decimal,
+        nullable: eitherNullable,
+        fromString: fromString,
+      );
     }
     if (kinds.containsAll({JsonKind.string, JsonKind.dateTime})) {
       return FieldType(JsonKind.string, nullable: eitherNullable);

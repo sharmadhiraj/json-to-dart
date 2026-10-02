@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:json_to_dart/data/settings_service.dart';
 import 'package:json_to_dart/screens/home.dart';
+import 'package:json_to_dart/util/app_theme.dart';
 import 'package:json_to_dart/util/constants.dart';
 
 void main() {
@@ -38,20 +39,10 @@ class _JsonToDartAppState extends State<JsonToDartApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: Constant.appName,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
+      theme: AppTheme.build(Brightness.light),
+      darkTheme: AppTheme.build(Brightness.dark),
       themeMode: _themeMode,
       home: HomeScreen(onToggleTheme: _toggleTheme),
-    );
-  }
-
-  static ThemeData _theme(Brightness brightness) {
-    return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.teal,
-        brightness: brightness,
-      ),
-      useMaterial3: true,
     );
   }
 }

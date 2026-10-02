@@ -14,14 +14,11 @@ class OptionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: label,
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: onChanged,
-        visualDensity: VisualDensity.compact,
-      ),
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onChanged,
+      visualDensity: VisualDensity.compact,
     );
   }
 }

@@ -8,6 +8,9 @@ class GeneratorOptions {
     this.detectDates = false,
     this.allNullable = false,
     this.detectMaps = true,
+    this.numericStrings = false,
+    this.snakeCaseFields = false,
+    this.mutableFields = false,
     this.classRenames = const {},
   });
 
@@ -21,6 +24,9 @@ class GeneratorOptions {
       detectDates: json["detectDates"] as bool? ?? false,
       allNullable: json["allNullable"] as bool? ?? false,
       detectMaps: json["detectMaps"] as bool? ?? true,
+      numericStrings: json["numericStrings"] as bool? ?? false,
+      snakeCaseFields: json["snakeCaseFields"] as bool? ?? false,
+      mutableFields: json["mutableFields"] as bool? ?? false,
       classRenames: _parseRenames(json["classRenames"]),
     );
   }
@@ -33,6 +39,9 @@ class GeneratorOptions {
   final bool detectDates;
   final bool allNullable;
   final bool detectMaps;
+  final bool numericStrings;
+  final bool snakeCaseFields;
+  final bool mutableFields;
 
   /// Maps a generated nested class name to the name the user chose.
   final Map<String, String> classRenames;
@@ -48,6 +57,9 @@ class GeneratorOptions {
     bool? detectDates,
     bool? allNullable,
     bool? detectMaps,
+    bool? numericStrings,
+    bool? snakeCaseFields,
+    bool? mutableFields,
     Map<String, String>? classRenames,
   }) {
     return GeneratorOptions(
@@ -59,6 +71,9 @@ class GeneratorOptions {
       detectDates: detectDates ?? this.detectDates,
       allNullable: allNullable ?? this.allNullable,
       detectMaps: detectMaps ?? this.detectMaps,
+      numericStrings: numericStrings ?? this.numericStrings,
+      snakeCaseFields: snakeCaseFields ?? this.snakeCaseFields,
+      mutableFields: mutableFields ?? this.mutableFields,
       classRenames: classRenames ?? this.classRenames,
     );
   }
@@ -73,6 +88,9 @@ class GeneratorOptions {
       "detectDates": detectDates,
       "allNullable": allNullable,
       "detectMaps": detectMaps,
+      "numericStrings": numericStrings,
+      "snakeCaseFields": snakeCaseFields,
+      "mutableFields": mutableFields,
       "classRenames": classRenames,
     };
   }

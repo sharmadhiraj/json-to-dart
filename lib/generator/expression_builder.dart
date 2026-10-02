@@ -27,12 +27,17 @@ class ExpressionBuilder {
       case JsonKind.string:
         return "$source as String$q";
       case JsonKind.integer:
-        return "$source as int$q";
+        return type.fromString
+            ? _nullGuard(type, source, "int.parse($source.toString())")
+            : "$source as int$q";
       case JsonKind.boolean:
         return "$source as bool$q";
       case JsonKind.dateTime:
         return _nullGuard(type, source, "DateTime.parse($source as String)");
       case JsonKind.decimal:
+        if (type.fromString) {
+          return _nullGuard(type, source, "double.parse($source.toString())");
+        }
         return type.nullable
             ? "($source as num?)?.toDouble()"
             : "($source as num).toDouble()";
@@ -83,6 +88,7 @@ class ExpressionBuilder {
     final String q = type.nullable ? "?" : "";
     if (type.kind == JsonKind.object) return "$source$q.toJson()";
     if (type.kind == JsonKind.dateTime) return "$source$q.toIso8601String()";
+    if (type.fromString) return "$source$q.toString()";
     if (type.kind == JsonKind.map && _needsConversion(type.innermost)) {
       final String key = _suffixed("k", depth);
       final String value = _suffixed("v", depth);
@@ -98,7 +104,9 @@ class ExpressionBuilder {
   }
 
   static bool _needsConversion(FieldType leaf) =>
-      leaf.kind == JsonKind.object || leaf.kind == JsonKind.dateTime;
+      leaf.kind == JsonKind.object ||
+      leaf.kind == JsonKind.dateTime ||
+      leaf.fromString;
 
   static String _nullGuard(FieldType type, String source, String expr) =>
       type.nullable ? "$source == null ? null : $expr" : expr;

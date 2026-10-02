@@ -14,6 +14,10 @@ class SchemaInferrer {
     r"^(\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\d{4}[-/]\d{2}([-/]\d{2})?([T ].*)?|[0-9a-fA-F]{12,}|[A-Za-z]{1,4}[-_]?\d+)$",
   );
 
+  static final RegExp _intString = RegExp(r"^-?(0|[1-9][0-9]{0,14})$");
+  static final RegExp _decimalString =
+      RegExp(r"^-?(0|[1-9][0-9]{0,14})\.[0-9]{1,15}$");
+
   final String _rootName;
   final GeneratorOptions _options;
   final Map<String, Map<String, FieldType>> _classes = {};
@@ -36,11 +40,7 @@ class SchemaInferrer {
       case null:
         return FieldType.nullValue;
       case final String text:
-        return FieldType(
-          _options.detectDates && _isoDate.hasMatch(text)
-              ? JsonKind.dateTime
-              : JsonKind.string,
-        );
+        return _inferString(text);
       case bool():
         return const FieldType(JsonKind.boolean);
       case final JsonNumber number:
@@ -65,10 +65,30 @@ class SchemaInferrer {
         for (final Object? item in list) {
           element = element.mergeWith(_infer(item, key, inList: true));
         }
+        // An empty object among objects means every field is optional.
+        if (element.kind == JsonKind.object &&
+            list.any((i) => i is Map && i.isEmpty)) {
+          _registerClass(element.className!, const {});
+        }
         return FieldType(JsonKind.list, element: element);
       default:
         return FieldType.dynamicType;
     }
+  }
+
+  FieldType _inferString(String text) {
+    if (_options.detectDates && _isoDate.hasMatch(text)) {
+      return const FieldType(JsonKind.dateTime);
+    }
+    if (_options.numericStrings) {
+      if (_intString.hasMatch(text)) {
+        return const FieldType(JsonKind.integer, fromString: true);
+      }
+      if (_decimalString.hasMatch(text)) {
+        return const FieldType(JsonKind.decimal, fromString: true);
+      }
+    }
+    return const FieldType(JsonKind.string);
   }
 
   Map<String, FieldType> _inferFields(Map<String, Object?> json) => {

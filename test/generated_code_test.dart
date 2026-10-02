@@ -9,6 +9,11 @@ import 'package:json_to_dart/generator/generator_options.dart';
 
 const Map<String, GeneratorOptions> _variants = {
   "default": GeneratorOptions(),
+  "style": GeneratorOptions(
+    snakeCaseFields: true,
+    mutableFields: true,
+    numericStrings: true,
+  ),
   "full": GeneratorOptions(
     copyWithMethod: true,
     equality: true,

@@ -14,9 +14,10 @@ class ClassEmitter {
         ? {for (final e in parsedFields.entries) e.key: e.value.asNullable()}
         : parsedFields;
     final Map<String, String> names = _fieldNames(fields.keys);
+    final String finalKeyword = options.mutableFields ? "" : "final ";
     final StringBuffer out = StringBuffer()..writeln("class $className {");
     for (final MapEntry<String, FieldType> f in fields.entries) {
-      out.writeln("  final ${f.value.dartType} ${names[f.key]};");
+      out.writeln("  $finalKeyword${f.value.dartType} ${names[f.key]};");
     }
     out.writeln();
     _writeConstructor(out, className, fields, names);
@@ -37,11 +38,12 @@ class ClassEmitter {
     Map<String, FieldType> fields,
     Map<String, String> names,
   ) {
+    final String constKeyword = options.mutableFields ? "" : "const ";
     if (fields.isEmpty) {
-      out.writeln("  const $className();");
+      out.writeln("  $constKeyword$className();");
       return;
     }
-    out.writeln("  const $className({");
+    out.writeln("  $constKeyword$className({");
     for (final MapEntry<String, FieldType> f in fields.entries) {
       final String prefix = f.value.isOptional ? "" : "required ";
       out.writeln("    ${prefix}this.${names[f.key]},");
@@ -165,11 +167,12 @@ class ClassEmitter {
       );
   }
 
-  static Map<String, String> _fieldNames(Iterable<String> keys) {
+  Map<String, String> _fieldNames(Iterable<String> keys) {
     final Map<String, String> names = {};
     final Set<String> used = {};
     for (final String key in keys) {
-      final String base = Naming.fieldName(key);
+      final String base =
+          Naming.fieldName(key, snakeCase: options.snakeCaseFields);
       String name = base;
       int suffix = 2;
       while (!used.add(name)) {

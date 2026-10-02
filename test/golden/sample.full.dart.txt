@@ -13,6 +13,9 @@ class Root {
   final List<String>? tags;
   final List<List<int>>? matrix;
   final List<dynamic>? mixed;
+  final String? priceText;
+  final String? qtyText;
+  final List<String>? codes;
   final Map<String, dynamic>? meta;
   final Map<String, Score>? scores;
   final Map<String, List<int>>? refs;
@@ -31,6 +34,9 @@ class Root {
     this.tags,
     this.matrix,
     this.mixed,
+    this.priceText,
+    this.qtyText,
+    this.codes,
     this.meta,
     this.scores,
     this.refs,
@@ -51,6 +57,9 @@ class Root {
       tags: json["tags"] == null ? null : (json["tags"] as List).map((e) => e as String).toList(),
       matrix: json["matrix"] == null ? null : (json["matrix"] as List).map((e) => (e as List).map((e2) => e2 as int).toList()).toList(),
       mixed: json["mixed"] == null ? null : List<dynamic>.from(json["mixed"] as List),
+      priceText: json["price_text"] as String?,
+      qtyText: json["qty_text"] as String?,
+      codes: json["codes"] == null ? null : (json["codes"] as List).map((e) => e as String).toList(),
       meta: json["meta"] == null ? null : Map<String, dynamic>.from(json["meta"] as Map),
       scores: json["scores"] == null ? null : (json["scores"] as Map<String, dynamic>).map((k, v) => MapEntry(k, Score.fromJson(v as Map<String, dynamic>))),
       refs: json["refs"] == null ? null : (json["refs"] as Map<String, dynamic>).map((k, v) => MapEntry(k, (v as List).map((e2) => e2 as int).toList())),
@@ -72,6 +81,9 @@ class Root {
       "tags": tags,
       "matrix": matrix,
       "mixed": mixed,
+      "price_text": priceText,
+      "qty_text": qtyText,
+      "codes": codes,
       "meta": meta,
       "scores": scores?.map((k, v) => MapEntry(k, v.toJson())),
       "refs": refs,
@@ -99,6 +111,9 @@ class Root {
     List<String>? tags,
     List<List<int>>? matrix,
     List<dynamic>? mixed,
+    String? priceText,
+    String? qtyText,
+    List<String>? codes,
     Map<String, dynamic>? meta,
     Map<String, Score>? scores,
     Map<String, List<int>>? refs,
@@ -117,6 +132,9 @@ class Root {
       tags: tags ?? this.tags,
       matrix: matrix ?? this.matrix,
       mixed: mixed ?? this.mixed,
+      priceText: priceText ?? this.priceText,
+      qtyText: qtyText ?? this.qtyText,
+      codes: codes ?? this.codes,
       meta: meta ?? this.meta,
       scores: scores ?? this.scores,
       refs: refs ?? this.refs,
@@ -127,11 +145,11 @@ class Root {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Root && other.id == id && other.name == name && other.rating == rating && other.price == price && other.active == active && other.createdAt == createdAt && const DeepCollectionEquality().equals(other.dates, dates) && other.classValue == classValue && other.address == address && const DeepCollectionEquality().equals(other.tags, tags) && const DeepCollectionEquality().equals(other.matrix, matrix) && const DeepCollectionEquality().equals(other.mixed, mixed) && const DeepCollectionEquality().equals(other.meta, meta) && const DeepCollectionEquality().equals(other.scores, scores) && const DeepCollectionEquality().equals(other.refs, refs) && const DeepCollectionEquality().equals(other.orders, orders);
+    return other is Root && other.id == id && other.name == name && other.rating == rating && other.price == price && other.active == active && other.createdAt == createdAt && const DeepCollectionEquality().equals(other.dates, dates) && other.classValue == classValue && other.address == address && const DeepCollectionEquality().equals(other.tags, tags) && const DeepCollectionEquality().equals(other.matrix, matrix) && const DeepCollectionEquality().equals(other.mixed, mixed) && other.priceText == priceText && other.qtyText == qtyText && const DeepCollectionEquality().equals(other.codes, codes) && const DeepCollectionEquality().equals(other.meta, meta) && const DeepCollectionEquality().equals(other.scores, scores) && const DeepCollectionEquality().equals(other.refs, refs) && const DeepCollectionEquality().equals(other.orders, orders);
   }
 
   @override
-  int get hashCode => Object.hashAll([id, name, rating, price, active, createdAt, const DeepCollectionEquality().hash(dates), classValue, address, const DeepCollectionEquality().hash(tags), const DeepCollectionEquality().hash(matrix), const DeepCollectionEquality().hash(mixed), const DeepCollectionEquality().hash(meta), const DeepCollectionEquality().hash(scores), const DeepCollectionEquality().hash(refs), const DeepCollectionEquality().hash(orders)]);
+  int get hashCode => Object.hashAll([id, name, rating, price, active, createdAt, const DeepCollectionEquality().hash(dates), classValue, address, const DeepCollectionEquality().hash(tags), const DeepCollectionEquality().hash(matrix), const DeepCollectionEquality().hash(mixed), priceText, qtyText, const DeepCollectionEquality().hash(codes), const DeepCollectionEquality().hash(meta), const DeepCollectionEquality().hash(scores), const DeepCollectionEquality().hash(refs), const DeepCollectionEquality().hash(orders)]);
 }
 
 class Address {

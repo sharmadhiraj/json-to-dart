@@ -11,6 +11,11 @@ import 'package:json_to_dart/generator/json_parser.dart';
 import 'package:json_to_dart/generator/naming.dart';
 
 class ConverterController extends ChangeNotifier {
+  static const int largeInputThreshold = 300000;
+  static const int maxHistoryEntries = 10;
+  static const int maxHistoryChars = 100000;
+  static const int maxPersistedChars = 1000000;
+
   ConverterController({
     SettingsService settingsService = const SettingsService(),
     Duration debounceDuration = const Duration(milliseconds: 300),
@@ -28,6 +33,7 @@ class ConverterController extends ChangeNotifier {
   String? _error;
   List<GeneratedClass> _nestedClasses = const [];
   bool _copied = false;
+  List<AppSettings> _history = [];
   Timer? _copiedReset;
   GeneratorOptions _options = const GeneratorOptions();
   String? _generatedJson;
@@ -39,6 +45,10 @@ class ConverterController extends ChangeNotifier {
   String? get error => _error;
   List<GeneratedClass> get nestedClasses => _nestedClasses;
   bool get copied => _copied;
+  List<AppSettings> get history => List.unmodifiable(_history);
+
+  /// Large text makes the editor itself slow, so the UI swaps it for a preview.
+  bool get isLargeInput => jsonController.text.length > largeInputThreshold;
   AppSettings get currentSettings => AppSettings(
         className: classNameController.text,
         jsonCode: jsonController.text,
@@ -49,7 +59,9 @@ class ConverterController extends ChangeNotifier {
 
   Future<void> load({AppSettings? initial}) async {
     final AppSettings settings = initial ?? await _settingsService.load();
+    final List<AppSettings> history = await _settingsService.loadHistory();
     if (_disposed) return;
+    _history = history;
     jsonController.text = settings.jsonCode;
     classNameController.text = settings.className;
     _options = settings.options;
@@ -66,12 +78,47 @@ class ConverterController extends ChangeNotifier {
     _regenerate();
   }
 
-  void setJson(String text, {bool keepRenames = false}) {
-    jsonController.text = text;
-    if (!keepRenames && _options.classRenames.isNotEmpty) {
-      _options = _options.copyWith(classRenames: const {});
+  /// [inPlace] edits (like formatting) keep history and class renames.
+  void setJson(String text, {bool inPlace = false}) {
+    if (!inPlace) {
+      _remember();
+      if (_options.classRenames.isNotEmpty) {
+        _options = _options.copyWith(classRenames: const {});
+      }
     }
+    jsonController.text = text;
     _regenerate();
+  }
+
+  void restore(int index) {
+    if (index < 0 || index >= _history.length) return;
+    final AppSettings entry = _history.removeAt(index);
+    _remember();
+    classNameController.text = entry.className;
+    jsonController.text = entry.jsonCode;
+    _options = entry.options;
+    _regenerate();
+  }
+
+  void clearHistory() {
+    _history = [];
+    notifyListeners();
+    unawaited(_settingsService.saveHistory(_history));
+  }
+
+  void _remember() {
+    final AppSettings current = currentSettings;
+    final String code = current.jsonCode;
+    if (code.trim().isEmpty || code.length > maxHistoryChars) return;
+    _history
+      ..removeWhere(
+        (h) => h.jsonCode == code && h.className == current.className,
+      )
+      ..insert(0, current);
+    if (_history.length > maxHistoryEntries) {
+      _history = _history.sublist(0, maxHistoryEntries);
+    }
+    unawaited(_settingsService.saveHistory(_history));
   }
 
   void setClassRenames(Map<String, String> renames) =>
@@ -95,7 +142,7 @@ class ConverterController extends ChangeNotifier {
 
   void formatJson() {
     try {
-      setJson(JsonFormatter.prettify(jsonController.text), keepRenames: true);
+      setJson(JsonFormatter.prettify(jsonController.text), inPlace: true);
     } on JsonParseException catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -141,12 +188,15 @@ class ConverterController extends ChangeNotifier {
   }
 
   Future<void> _persist() {
+    final AppSettings current = currentSettings;
+    final bool tooLarge = current.jsonCode.length > maxPersistedChars;
     return _settingsService.save(
-      AppSettings(
-        className: classNameController.text,
-        jsonCode: jsonController.text,
-        options: _options,
-      ),
+      tooLarge
+          ? AppSettings(
+              className: current.className,
+              options: current.options,
+            )
+          : current,
     );
   }
 

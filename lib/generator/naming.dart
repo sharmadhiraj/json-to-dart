@@ -84,7 +84,15 @@ abstract final class Naming {
     return _builtInTypes.contains(name) ? "${name}Model" : name;
   }
 
-  static String fieldName(String input) {
+  static String fieldName(String input, {bool snakeCase = false}) {
+    if (snakeCase) {
+      final List<String> words = _words(input);
+      if (words.isEmpty) return "field";
+      final String joined = words.map((w) => w.toLowerCase()).join("_");
+      final String name =
+          RegExp("^[0-9]").hasMatch(joined) ? "a_$joined" : joined;
+      return _reservedWords.contains(name) ? "${name}_value" : name;
+    }
     final String pascal = _pascalCase(input);
     if (pascal.isEmpty) return "field";
     final String name = "${pascal[0].toLowerCase()}${pascal.substring(1)}";

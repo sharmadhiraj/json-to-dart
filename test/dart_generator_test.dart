@@ -269,4 +269,113 @@ void main() {
       expect(out, contains("class MyAccount {"));
     });
   });
+
+  group("numeric strings", () {
+    const GeneratorOptions on = GeneratorOptions(numericStrings: true);
+
+    test("quoted numbers become int and double", () {
+      final String out =
+          gen('{"qty":"42","price":"12.50","name":"x"}', options: on);
+      expect(out, contains("final int qty;"));
+      expect(out, contains("final double price;"));
+      expect(out, contains("final String name;"));
+      expect(out, contains('qty: int.parse(json["qty"].toString())'));
+      expect(out, contains('price: double.parse(json["price"].toString())'));
+      expect(out, contains('"qty": qty.toString()'));
+      expect(out, contains('"price": price.toString()'));
+    });
+
+    test("is off by default", () {
+      expect(gen('{"qty":"42"}'), contains("final String qty;"));
+    });
+
+    test("leading zeros and long digit runs stay strings", () {
+      final String out = gen(
+        '{"zip":"02134","phone":"0412345678","big":"12345678901234567890"}',
+        options: on,
+      );
+      expect(out, contains("final String zip;"));
+      expect(out, contains("final String phone;"));
+      expect(out, contains("final String big;"));
+    });
+
+    test("numeric strings mixed with real numbers or text fall back", () {
+      expect(gen('{"l":["1",2]}', options: on), contains("List<dynamic> l;"));
+      expect(gen('{"l":["1","a"]}', options: on), contains("List<dynamic> l;"));
+    });
+
+    test("ints and decimals as strings merge to double", () {
+      expect(
+        gen('{"l":["1","2.5"]}', options: on),
+        contains("List<double> l;"),
+      );
+    });
+
+    test("nullable and list forms", () {
+      final String out = gen('{"a":[{"n":"1"},{}],"l":["1","2"]}', options: on);
+      expect(out, contains("final int? n;"));
+      expect(
+        out,
+        contains(
+          'n: json["n"] == null ? null : int.parse(json["n"].toString())',
+        ),
+      );
+      expect(out, contains("l.map((e) => e.toString()).toList()"));
+    });
+
+    test("dates win over numeric detection", () {
+      final String out = gen(
+        '{"d":"2024-01-02"}',
+        options:
+            const GeneratorOptions(numericStrings: true, detectDates: true),
+      );
+      expect(out, contains("final DateTime d;"));
+    });
+  });
+
+  group("field style", () {
+    test("snake_case keeps readable snake names", () {
+      final String out = gen(
+        '{"user_name":"a","userID":1,"2fa":true,"class":1}',
+        options: const GeneratorOptions(snakeCaseFields: true),
+      );
+      expect(out, contains("final String user_name;"));
+      expect(out, contains("final int user_id;"));
+      expect(out, contains("final bool a_2_fa;"));
+      expect(out, contains("final int class_value;"));
+      expect(out, contains('user_name: json["user_name"] as String'));
+    });
+
+    test("mutable fields drop final and const", () {
+      final String out = gen(
+        '{"a":1,"o":{"b":2}}',
+        options: const GeneratorOptions(mutableFields: true),
+      );
+      expect(out, contains("  int a;"));
+      expect(out, isNot(contains("final")));
+      expect(out, contains("  Root({"));
+      expect(out, isNot(contains("const ")));
+      expect(
+        gen("{}", options: const GeneratorOptions(mutableFields: true)),
+        contains("Root();"),
+      );
+    });
+  });
+
+  group("merging", () {
+    test("maps inside lists merge their values", () {
+      final String out =
+          gen('{"l":[{"x":{"1":1,"2":2}},{"x":{"3":"a","4":"b"}}]}');
+      expect(out, contains("final Map<String, dynamic> x;"));
+      final String same =
+          gen('{"l":[{"x":{"1":1,"2":2}},{"x":{"3":3,"4":4}}]}');
+      expect(same, contains("final Map<String, int> x;"));
+    });
+
+    test("an empty object among objects makes all fields optional", () {
+      final String out = gen('{"l":[{"a":1},{}]}');
+      expect(out, contains("final int? a;"));
+      expect(out, contains("final List<L> l;"));
+    });
+  });
 }

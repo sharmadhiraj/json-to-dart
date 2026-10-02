@@ -1,39 +1,39 @@
 class Root {
-  final int id;
-  final String name;
-  final double rating;
-  final double price;
-  final bool active;
-  final String createdAt;
-  final List<String> dates;
-  final String classValue;
-  final Address address;
-  final List<String> tags;
-  final List<List<int>> matrix;
-  final List<dynamic> mixed;
-  final String priceText;
-  final String qtyText;
-  final List<String> codes;
-  final Map<String, dynamic> meta;
-  final Map<String, Score> scores;
-  final Map<String, List<int>> refs;
-  final List<Order> orders;
+  int id;
+  String name;
+  double rating;
+  double price;
+  bool active;
+  String created_at;
+  List<String> dates;
+  String class_value;
+  Address address;
+  List<String> tags;
+  List<List<int>> matrix;
+  List<dynamic> mixed;
+  double price_text;
+  int qty_text;
+  List<int> codes;
+  Map<String, dynamic> meta;
+  Map<String, Score> scores;
+  Map<String, List<int>> refs;
+  List<Order> orders;
 
-  const Root({
+  Root({
     required this.id,
     required this.name,
     required this.rating,
     required this.price,
     required this.active,
-    required this.createdAt,
+    required this.created_at,
     required this.dates,
-    required this.classValue,
+    required this.class_value,
     required this.address,
     required this.tags,
     required this.matrix,
     required this.mixed,
-    required this.priceText,
-    required this.qtyText,
+    required this.price_text,
+    required this.qty_text,
     required this.codes,
     required this.meta,
     required this.scores,
@@ -48,16 +48,16 @@ class Root {
       rating: (json["rating"] as num).toDouble(),
       price: (json["price"] as num).toDouble(),
       active: json["active"] as bool,
-      createdAt: json["created_at"] as String,
+      created_at: json["created_at"] as String,
       dates: (json["dates"] as List).map((e) => e as String).toList(),
-      classValue: json["class"] as String,
+      class_value: json["class"] as String,
       address: Address.fromJson(json["address"] as Map<String, dynamic>),
       tags: (json["tags"] as List).map((e) => e as String).toList(),
       matrix: (json["matrix"] as List).map((e) => (e as List).map((e2) => e2 as int).toList()).toList(),
       mixed: List<dynamic>.from(json["mixed"] as List),
-      priceText: json["price_text"] as String,
-      qtyText: json["qty_text"] as String,
-      codes: (json["codes"] as List).map((e) => e as String).toList(),
+      price_text: double.parse(json["price_text"].toString()),
+      qty_text: int.parse(json["qty_text"].toString()),
+      codes: (json["codes"] as List).map((e) => int.parse(e.toString())).toList(),
       meta: Map<String, dynamic>.from(json["meta"] as Map),
       scores: (json["scores"] as Map<String, dynamic>).map((k, v) => MapEntry(k, Score.fromJson(v as Map<String, dynamic>))),
       refs: (json["refs"] as Map<String, dynamic>).map((k, v) => MapEntry(k, (v as List).map((e2) => e2 as int).toList())),
@@ -72,16 +72,16 @@ class Root {
       "rating": rating,
       "price": price,
       "active": active,
-      "created_at": createdAt,
+      "created_at": created_at,
       "dates": dates,
-      "class": classValue,
+      "class": class_value,
       "address": address.toJson(),
       "tags": tags,
       "matrix": matrix,
       "mixed": mixed,
-      "price_text": priceText,
-      "qty_text": qtyText,
-      "codes": codes,
+      "price_text": price_text.toString(),
+      "qty_text": qty_text.toString(),
+      "codes": codes.map((e) => e.toString()).toList(),
       "meta": meta,
       "scores": scores.map((k, v) => MapEntry(k, v.toJson())),
       "refs": refs,
@@ -98,10 +98,10 @@ class Root {
 }
 
 class Address {
-  final String city;
-  final String postcode;
+  String city;
+  int postcode;
 
-  const Address({
+  Address({
     required this.city,
     required this.postcode,
   });
@@ -109,14 +109,14 @@ class Address {
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
       city: json["city"] as String,
-      postcode: json["postcode"] as String,
+      postcode: int.parse(json["postcode"].toString()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       "city": city,
-      "postcode": postcode,
+      "postcode": postcode.toString(),
     };
   }
 
@@ -129,10 +129,10 @@ class Address {
 }
 
 class Score {
-  final int value;
-  final List<String>? tags;
+  int value;
+  List<String>? tags;
 
-  const Score({
+  Score({
     required this.value,
     this.tags,
   });
@@ -160,13 +160,13 @@ class Score {
 }
 
 class Order {
-  final int id;
-  final double total;
-  final dynamic note;
-  final List<Line>? lines;
-  final bool? extra;
+  int id;
+  double total;
+  dynamic note;
+  List<Line>? lines;
+  bool? extra;
 
-  const Order({
+  Order({
     required this.id,
     required this.total,
     this.note,
@@ -203,9 +203,9 @@ class Order {
 }
 
 class Line {
-  final String sku;
+  String sku;
 
-  const Line({
+  Line({
     required this.sku,
   });
 
