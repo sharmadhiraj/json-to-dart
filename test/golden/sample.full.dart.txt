@@ -1,0 +1,279 @@
+import 'package:collection/collection.dart';
+
+class Root {
+  final int? id;
+  final String? name;
+  final double? rating;
+  final double? price;
+  final bool? active;
+  final DateTime? createdAt;
+  final List<DateTime>? dates;
+  final String? classValue;
+  final Address? address;
+  final List<String>? tags;
+  final List<List<int>>? matrix;
+  final List<dynamic>? mixed;
+  final List<Order>? orders;
+
+  const Root({
+    this.id,
+    this.name,
+    this.rating,
+    this.price,
+    this.active,
+    this.createdAt,
+    this.dates,
+    this.classValue,
+    this.address,
+    this.tags,
+    this.matrix,
+    this.mixed,
+    this.orders,
+  });
+
+  factory Root.fromJson(Map<String, dynamic> json) {
+    return Root(
+      id: json["id"] as int?,
+      name: json["name"] as String?,
+      rating: (json["rating"] as num?)?.toDouble(),
+      price: (json["price"] as num?)?.toDouble(),
+      active: json["active"] as bool?,
+      createdAt: json["created_at"] == null ? null : DateTime.parse(json["created_at"] as String),
+      dates: json["dates"] == null ? null : (json["dates"] as List).map((e) => DateTime.parse(e as String)).toList(),
+      classValue: json["class"] as String?,
+      address: json["address"] == null ? null : Address.fromJson(json["address"] as Map<String, dynamic>),
+      tags: json["tags"] == null ? null : (json["tags"] as List).map((e) => e as String).toList(),
+      matrix: json["matrix"] == null ? null : (json["matrix"] as List).map((e) => (e as List).map((e2) => e2 as int).toList()).toList(),
+      mixed: json["mixed"] == null ? null : List<dynamic>.from(json["mixed"] as List),
+      orders: json["orders"] == null ? null : Order.parseList(json["orders"]),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "name": name,
+      "rating": rating,
+      "price": price,
+      "active": active,
+      "created_at": createdAt?.toIso8601String(),
+      "dates": dates?.map((e) => e.toIso8601String()).toList(),
+      "class": classValue,
+      "address": address?.toJson(),
+      "tags": tags,
+      "matrix": matrix,
+      "mixed": mixed,
+      "orders": orders?.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  static List<Root> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Root.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Root copyWith({
+    int? id,
+    String? name,
+    double? rating,
+    double? price,
+    bool? active,
+    DateTime? createdAt,
+    List<DateTime>? dates,
+    String? classValue,
+    Address? address,
+    List<String>? tags,
+    List<List<int>>? matrix,
+    List<dynamic>? mixed,
+    List<Order>? orders,
+  }) {
+    return Root(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      rating: rating ?? this.rating,
+      price: price ?? this.price,
+      active: active ?? this.active,
+      createdAt: createdAt ?? this.createdAt,
+      dates: dates ?? this.dates,
+      classValue: classValue ?? this.classValue,
+      address: address ?? this.address,
+      tags: tags ?? this.tags,
+      matrix: matrix ?? this.matrix,
+      mixed: mixed ?? this.mixed,
+      orders: orders ?? this.orders,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Root && other.id == id && other.name == name && other.rating == rating && other.price == price && other.active == active && other.createdAt == createdAt && const DeepCollectionEquality().equals(other.dates, dates) && other.classValue == classValue && other.address == address && const DeepCollectionEquality().equals(other.tags, tags) && const DeepCollectionEquality().equals(other.matrix, matrix) && const DeepCollectionEquality().equals(other.mixed, mixed) && const DeepCollectionEquality().equals(other.orders, orders);
+  }
+
+  @override
+  int get hashCode => Object.hashAll([id, name, rating, price, active, createdAt, const DeepCollectionEquality().hash(dates), classValue, address, const DeepCollectionEquality().hash(tags), const DeepCollectionEquality().hash(matrix), const DeepCollectionEquality().hash(mixed), const DeepCollectionEquality().hash(orders)]);
+}
+
+class Address {
+  final String? city;
+  final String? postcode;
+
+  const Address({
+    this.city,
+    this.postcode,
+  });
+
+  factory Address.fromJson(Map<String, dynamic> json) {
+    return Address(
+      city: json["city"] as String?,
+      postcode: json["postcode"] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "city": city,
+      "postcode": postcode,
+    };
+  }
+
+  static List<Address> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Address.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Address copyWith({
+    String? city,
+    String? postcode,
+  }) {
+    return Address(
+      city: city ?? this.city,
+      postcode: postcode ?? this.postcode,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Address && other.city == city && other.postcode == postcode;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([city, postcode]);
+}
+
+class Order {
+  final int? id;
+  final double? total;
+  final dynamic note;
+  final List<Line>? lines;
+  final bool? extra;
+
+  const Order({
+    this.id,
+    this.total,
+    this.note,
+    this.lines,
+    this.extra,
+  });
+
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      id: json["id"] as int?,
+      total: (json["total"] as num?)?.toDouble(),
+      note: json["note"],
+      lines: json["lines"] == null ? null : Line.parseList(json["lines"]),
+      extra: json["extra"] as bool?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "total": total,
+      "note": note,
+      "lines": lines?.map((e) => e.toJson()).toList(),
+      "extra": extra,
+    };
+  }
+
+  static List<Order> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Order copyWith({
+    int? id,
+    double? total,
+    dynamic note,
+    List<Line>? lines,
+    bool? extra,
+  }) {
+    return Order(
+      id: id ?? this.id,
+      total: total ?? this.total,
+      note: note ?? this.note,
+      lines: lines ?? this.lines,
+      extra: extra ?? this.extra,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Order && other.id == id && other.total == total && other.note == note && const DeepCollectionEquality().equals(other.lines, lines) && other.extra == extra;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([id, total, note, const DeepCollectionEquality().hash(lines), extra]);
+}
+
+class Line {
+  final String? sku;
+
+  const Line({
+    this.sku,
+  });
+
+  factory Line.fromJson(Map<String, dynamic> json) {
+    return Line(
+      sku: json["sku"] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "sku": sku,
+    };
+  }
+
+  static List<Line> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Line.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Line copyWith({
+    String? sku,
+  }) {
+    return Line(
+      sku: sku ?? this.sku,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Line && other.sku == sku;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([sku]);
+}

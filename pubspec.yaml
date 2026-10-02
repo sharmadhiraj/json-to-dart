@@ -1,5 +1,5 @@
 name: json_to_dart
-description: "A Flutter web app simplifying the conversion of JSON data into Dart classes effortlessly."
+description: "Converts JSON into Dart classes: nested, nullable-aware, with fromJson, toJson and parseList."
 publish_to: 'none'
 version: 1.0.0+1
 

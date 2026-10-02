@@ -1,15 +1,15 @@
-import 'package:json_to_dart/generator/naming.dart';
-
 enum JsonKind {
   string,
   integer,
   decimal,
   boolean,
-  nullValue,
-  unknown,
+  dateTime,
   object,
   list,
   dynamic,
+  // Inference-only kinds, rendered as `dynamic`.
+  nullValue,
+  unknown,
 }
 
 class FieldType {
@@ -19,6 +19,12 @@ class FieldType {
     this.className,
     this.element,
   });
+
+  static const FieldType unknown = FieldType(JsonKind.unknown);
+  static const FieldType nullValue =
+      FieldType(JsonKind.nullValue, nullable: true);
+  static const FieldType dynamicType =
+      FieldType(JsonKind.dynamic, nullable: true);
 
   final JsonKind kind;
   final bool nullable;
@@ -32,93 +38,83 @@ class FieldType {
 
   bool get isOptional => nullable || isDynamic;
 
+  FieldType get innermost {
+    FieldType current = this;
+    while (current.kind == JsonKind.list) {
+      current = current.element!;
+    }
+    return current;
+  }
+
+  String get dartType {
+    final String base = switch (kind) {
+      JsonKind.string => "String",
+      JsonKind.integer => "int",
+      JsonKind.decimal => "double",
+      JsonKind.boolean => "bool",
+      JsonKind.dateTime => "DateTime",
+      JsonKind.object => className!,
+      JsonKind.list => "List<${element!.dartType}>",
+      _ => "dynamic",
+    };
+    return nullable && !isDynamic ? "$base?" : base;
+  }
+
   FieldType asNullable() => FieldType(
         kind,
         nullable: true,
         className: className,
         element: element,
       );
-}
 
-class SchemaInferrer {
-  final Map<String, Map<String, FieldType>> classes = {};
-
-  FieldType infer(Object? value, String name) {
-    if (value == null) return const FieldType(JsonKind.nullValue, nullable: true);
-    if (value is String) return const FieldType(JsonKind.string);
-    if (value is int) return const FieldType(JsonKind.integer);
-    if (value is double) return const FieldType(JsonKind.decimal);
-    if (value is bool) return const FieldType(JsonKind.boolean);
-    if (value is Map) {
-      final String className = Naming.className(name);
-      _registerClass(className, _inferFields(value));
-      return FieldType(JsonKind.object, className: className);
-    }
-    if (value is List) {
-      FieldType element = const FieldType(JsonKind.unknown);
-      for (final Object? item in value) {
-        element = _merge(element, infer(item, name));
-      }
-      return FieldType(JsonKind.list, element: element);
-    }
-    return const FieldType(JsonKind.dynamic, nullable: true);
-  }
-
-  void registerRoot(String className, Map<Object?, Object?> json) {
-    _registerClass(className, _inferFields(json));
-  }
-
-  Map<String, FieldType> _inferFields(Map<Object?, Object?> json) => {
-        for (final MapEntry<Object?, Object?> e in json.entries)
-          e.key.toString(): infer(e.value, e.key.toString()),
-      };
-
-  void _registerClass(String name, Map<String, FieldType> fields) {
-    final Map<String, FieldType>? existing = classes[name];
-    if (existing == null) {
-      classes[name] = fields;
-      return;
-    }
-    final Map<String, FieldType> merged = {};
-    for (final MapEntry<String, FieldType> e in existing.entries) {
-      final FieldType? other = fields[e.key];
-      merged[e.key] = other == null ? e.value.asNullable() : _merge(e.value, other);
-    }
-    for (final MapEntry<String, FieldType> e in fields.entries) {
-      merged.putIfAbsent(e.key, e.value.asNullable);
-    }
-    classes[name] = merged;
-  }
-
-  FieldType _merge(FieldType a, FieldType b) {
-    if (a.kind == JsonKind.unknown) return b;
-    if (b.kind == JsonKind.unknown) return a;
-    if (a.kind == JsonKind.nullValue) return b.asNullable();
-    if (b.kind == JsonKind.nullValue) return a.asNullable();
-    final bool nullable = a.nullable || b.nullable;
-    if (a.kind == b.kind) {
-      if (a.kind == JsonKind.list) {
-        return FieldType(
-          JsonKind.list,
-          nullable: nullable,
-          element: _merge(a.element!, b.element!),
-        );
-      }
-      if (a.kind == JsonKind.object && a.className != b.className) {
-        return const FieldType(JsonKind.dynamic, nullable: true);
+  FieldType mergeWith(FieldType other) {
+    if (kind == JsonKind.unknown) return other;
+    if (other.kind == JsonKind.unknown) return this;
+    if (kind == JsonKind.nullValue) return other.asNullable();
+    if (other.kind == JsonKind.nullValue) return asNullable();
+    final bool eitherNullable = nullable || other.nullable;
+    if (kind == other.kind) {
+      if (kind == JsonKind.object && className != other.className) {
+        return dynamicType;
       }
       return FieldType(
-        a.kind,
-        nullable: nullable,
-        className: a.className,
+        kind,
+        nullable: eitherNullable,
+        className: className,
+        element:
+            kind == JsonKind.list ? element!.mergeWith(other.element!) : null,
       );
     }
-    final Set<JsonKind> kinds = {a.kind, b.kind};
-    if (kinds.length == 2 &&
-        kinds.contains(JsonKind.integer) &&
-        kinds.contains(JsonKind.decimal)) {
-      return FieldType(JsonKind.decimal, nullable: nullable);
+    final Set<JsonKind> kinds = {kind, other.kind};
+    if (kinds.containsAll({JsonKind.integer, JsonKind.decimal})) {
+      return FieldType(JsonKind.decimal, nullable: eitherNullable);
     }
-    return const FieldType(JsonKind.dynamic, nullable: true);
+    if (kinds.containsAll({JsonKind.string, JsonKind.dateTime})) {
+      return FieldType(JsonKind.string, nullable: eitherNullable);
+    }
+    return dynamicType;
+  }
+}
+
+class Schema {
+  const Schema(this.rootName, this.classes);
+
+  final String rootName;
+  final Map<String, Map<String, FieldType>> classes;
+
+  /// Classes in depth-first order from the root, each listed once.
+  List<String> get orderedClassNames {
+    final Set<String> ordered = {};
+    void visit(String name) {
+      final Map<String, FieldType>? fields = classes[name];
+      if (fields == null || !ordered.add(name)) return;
+      for (final FieldType type in fields.values) {
+        final FieldType leaf = type.innermost;
+        if (leaf.kind == JsonKind.object) visit(leaf.className!);
+      }
+    }
+
+    visit(rootName);
+    return ordered.toList();
   }
 }

@@ -1,0 +1,34 @@
+class Root {
+  final int id;
+  final String userName;
+  final double? score;
+
+  const Root({
+    required this.id,
+    required this.userName,
+    this.score,
+  });
+
+  factory Root.fromJson(Map<String, dynamic> json) {
+    return Root(
+      id: json["id"] as int,
+      userName: json["user_name"] as String,
+      score: (json["score"] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "user_name": userName,
+      "score": score,
+    };
+  }
+
+  static List<Root> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Root.fromJson(e as Map<String, dynamic>)).toList();
+  }
+}

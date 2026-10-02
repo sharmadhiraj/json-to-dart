@@ -47,6 +47,22 @@ void main() {
     });
   });
 
+  group("Naming.singular", () {
+    test("singularizes common plurals", () {
+      expect(Naming.singular("items"), "item");
+      expect(Naming.singular("categories"), "category");
+      expect(Naming.singular("boxes"), "box");
+      expect(Naming.singular("addresses"), "address");
+    });
+
+    test("leaves non-plurals alone", () {
+      expect(Naming.singular("status"), "status");
+      expect(Naming.singular("class"), "class");
+      expect(Naming.singular("data"), "data");
+      expect(Naming.singular("s"), "s");
+    });
+  });
+
   group("Naming.fileName", () {
     test("converts to snake_case", () {
       expect(Naming.fileName("MyClass"), "my_class");

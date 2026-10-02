@@ -1,0 +1,55 @@
+class Root {
+  final int? id;
+  final String? userName;
+  final double? score;
+
+  const Root({
+    this.id,
+    this.userName,
+    this.score,
+  });
+
+  factory Root.fromJson(Map<String, dynamic> json) {
+    return Root(
+      id: json["id"] as int?,
+      userName: json["user_name"] as String?,
+      score: (json["score"] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "user_name": userName,
+      "score": score,
+    };
+  }
+
+  static List<Root> parseList(dynamic list) {
+    if (list is! List) {
+      return [];
+    }
+    return list.map((e) => Root.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Root copyWith({
+    int? id,
+    String? userName,
+    double? score,
+  }) {
+    return Root(
+      id: id ?? this.id,
+      userName: userName ?? this.userName,
+      score: score ?? this.score,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Root && other.id == id && other.userName == userName && other.score == score;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([id, userName, score]);
+}

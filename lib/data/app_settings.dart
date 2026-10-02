@@ -12,11 +12,7 @@ class AppSettings {
       className:
           json["className"] as String? ?? json["dartClass"] as String? ?? "",
       jsonCode: json["jsonCode"] as String? ?? "",
-      options: GeneratorOptions(
-        fromJson: json["fromJson"] as bool? ?? true,
-        toJson: json["toJson"] as bool? ?? true,
-        parseList: json["parseList"] as bool? ?? true,
-      ),
+      options: GeneratorOptions.fromMap(json),
     );
   }
 
@@ -28,9 +24,7 @@ class AppSettings {
     return {
       "className": className,
       "jsonCode": jsonCode,
-      "fromJson": options.fromJson,
-      "toJson": options.toJson,
-      "parseList": options.parseList,
+      ...options.toMap(),
     };
   }
 }

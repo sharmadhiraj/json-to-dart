@@ -14,11 +14,19 @@ class JsonToDartApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: Constant.appName,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
       home: const HomeScreen(),
+    );
+  }
+
+  static ThemeData _theme(Brightness brightness) {
+    return ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.teal,
+        brightness: brightness,
+      ),
+      useMaterial3: true,
     );
   }
 }

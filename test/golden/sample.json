@@ -1,0 +1,18 @@
+{
+  "id": 1,
+  "name": "Jane Doe",
+  "rating": 4.5,
+  "price": 10.0,
+  "active": true,
+  "created_at": "2024-01-02T10:00:00Z",
+  "dates": ["2024-01-02", "2024-02-03"],
+  "class": "admin",
+  "address": {"city": "Sydney", "postcode": "2000"},
+  "tags": ["admin", "beta"],
+  "matrix": [[1, 2], [3]],
+  "mixed": [1, "a"],
+  "orders": [
+    {"id": 10, "total": 25.0, "note": null, "lines": [{"sku": "a"}]},
+    {"id": 11, "total": 40, "extra": true}
+  ]
+}
